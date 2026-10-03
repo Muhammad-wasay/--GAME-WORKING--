@@ -1,0 +1,193 @@
+[gd_scene format=3 uid="uid://b4ikkae0h7cjq"]
+
+[ext_resource type="Script" uid="uid://dhro1x8yf3p6h" path="res://script/waterlayer.gd" id="1_0u2of"]
+
+[sub_resource type="Shader" id="Shader_3s7pb"]
+code = "// NOTE: Shader automatically converted from Godot Engine 4.7.stable's StandardMaterial3D.
+
+shader_type spatial;
+render_mode blend_mix, depth_draw_always, cull_back, diffuse_burley, specular_schlick_ggx;
+
+uniform vec4 albedo : source_color;
+uniform sampler2D texture_albedo : source_color, filter_linear_mipmap, repeat_enable;
+uniform ivec2 albedo_texture_size;
+uniform float point_size : hint_range(0.1, 128.0, 0.1);
+
+uniform float roughness : hint_range(0.0, 1.0);
+uniform sampler2D texture_metallic : hint_default_white, filter_linear_mipmap, repeat_enable;
+uniform vec4 metallic_texture_channel;
+uniform sampler2D texture_roughness : hint_roughness_r, filter_linear_mipmap, repeat_enable;
+
+uniform float specular : hint_range(0.0, 1.0, 0.01);
+uniform float metallic : hint_range(0.0, 1.0, 0.01);
+
+uniform sampler2D texture_refraction : filter_linear_mipmap, repeat_enable;
+uniform float refraction : hint_range(-1.0, 1.0, 0.001);
+uniform vec4 refraction_texture_channel;
+uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_linear_mipmap;
+uniform sampler2D depth_texture : hint_depth_texture, repeat_disable, filter_nearest;
+
+uniform sampler2D texture_normal : hint_roughness_normal, filter_linear_mipmap, repeat_enable;
+uniform float normal_scale : hint_range(-16.0, 16.0);
+varying vec3 uv1_triplanar_pos;
+
+uniform float uv1_blend_sharpness : hint_range(0.0, 150.0, 0.001);
+varying vec3 uv1_power_normal;
+
+uniform vec3 uv1_scale;
+uniform vec3 uv1_offset;
+uniform vec3 uv2_scale;
+uniform vec3 uv2_offset;
+
+void vertex() {
+	vec3 normal = MODEL_NORMAL_MATRIX * NORMAL;
+
+	TANGENT = vec3(0.0, 0.0, -1.0) * abs(normal.x);
+	TANGENT += vec3(1.0, 0.0, 0.0) * abs(normal.y);
+	TANGENT += vec3(1.0, 0.0, 0.0) * abs(normal.z);
+	TANGENT = inverse(MODEL_NORMAL_MATRIX) * normalize(TANGENT);
+
+	BINORMAL = vec3(0.0, 1.0, 0.0) * abs(normal.x);
+	BINORMAL += vec3(0.0, 0.0, -1.0) * abs(normal.y);
+	BINORMAL += vec3(0.0, 1.0, 0.0) * abs(normal.z);
+	BINORMAL = inverse(MODEL_NORMAL_MATRIX) * normalize(BINORMAL);
+
+	// UV1 Triplanar: Enabled (with World Triplanar)
+	uv1_power_normal = pow(abs(normal), vec3(uv1_blend_sharpness));
+	uv1_triplanar_pos = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz * uv1_scale + uv1_offset + TIME * 0.01;
+	uv1_power_normal /= dot(uv1_power_normal, vec3(1.0));
+	uv1_triplanar_pos *= vec3(1.0, -1.0, 1.0);
+}
+
+vec4 triplanar_texture(sampler2D p_sampler, vec3 p_weights, vec3 p_triplanar_pos) {
+	vec4 samp = vec4(0.0);
+	samp += texture(p_sampler, p_triplanar_pos.xy) * p_weights.z;
+	samp += texture(p_sampler, p_triplanar_pos.xz) * p_weights.y;
+	samp += texture(p_sampler, p_triplanar_pos.zy * vec2(-1.0, 1.0)) * p_weights.x;
+	return samp;
+}
+
+void fragment() {
+	vec4 albedo_tex = triplanar_texture(texture_albedo, uv1_power_normal, uv1_triplanar_pos);
+	ALBEDO = albedo.rgb * albedo_tex.rgb;
+
+	float metallic_tex = dot(triplanar_texture(texture_metallic, uv1_power_normal, uv1_triplanar_pos), metallic_texture_channel);
+	METALLIC = metallic_tex * metallic;
+	SPECULAR = specular;
+
+	vec4 roughness_texture_channel = vec4(1.0, 0.0, 0.0, 0.0);
+	float roughness_tex = dot(triplanar_texture(texture_roughness, uv1_power_normal, uv1_triplanar_pos), roughness_texture_channel);
+	ROUGHNESS = roughness_tex * roughness;
+
+	// Normal Map: Enabled
+	NORMAL_MAP = triplanar_texture(texture_normal, uv1_power_normal, uv1_triplanar_pos).rgb;
+	NORMAL_MAP_DEPTH = normal_scale;
+
+	// Refraction: Enabled (with normal map texture)
+	vec3 unpacked_normal = NORMAL_MAP;
+	unpacked_normal.xy = unpacked_normal.xy * 2.0 - 1.0;
+	unpacked_normal.z = sqrt(max(0.0, 1.0 - dot(unpacked_normal.xy, unpacked_normal.xy)));
+	vec3 ref_normal = normalize(mix(
+			NORMAL,
+			TANGENT * unpacked_normal.x + BINORMAL * unpacked_normal.y + NORMAL * unpacked_normal.z,
+			NORMAL_MAP_DEPTH));
+	vec2 ref_ofs = SCREEN_UV - ref_normal.xy * dot(triplanar_texture(texture_refraction, uv1_power_normal, uv1_triplanar_pos), refraction_texture_channel) * refraction;
+
+	float ref_amount = 1.0 - albedo.a * albedo_tex.a;
+
+	float refraction_depth_tex = textureLod(depth_texture, ref_ofs, 0.0).r;
+	vec4 ndc = OUTPUT_IS_SRGB ? vec4(vec3(SCREEN_UV, refraction_depth_tex) * 2.0 - 1.0, 1.0) : vec4(SCREEN_UV * 2.0 - 1.0, refraction_depth_tex, 1.0);
+	vec4 refraction_view_pos = INV_PROJECTION_MATRIX * ndc;
+	refraction_view_pos.xyz /= refraction_view_pos.w;
+
+	// If the depth buffer is lower then the model's Z position, use the refracted UV, otherwise use the normal screen UV.
+	// At low depth differences, decrease refraction intensity to avoid sudden discontinuities.
+	EMISSION += textureLod(screen_texture, mix(SCREEN_UV, ref_ofs, smoothstep(0.0, 1.0, VERTEX.z - refraction_view_pos.z)), ROUGHNESS * 8.0).rgb * ref_amount * EXPOSURE;
+	ALBEDO *= 1.0 - ref_amount;
+	// Force transparency on the material (required for refraction).
+	ALPHA = 1.0;
+}
+"
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_0bq2d"]
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_tkp5j"]
+noise = SubResource("FastNoiseLite_0bq2d")
+seamless = true
+as_normal_map = true
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_a6oc3"]
+render_priority = 0
+shader = SubResource("Shader_3s7pb")
+shader_parameter/albedo = Color(0.047058824, 0.31764707, 0.46666667, 0.5058824)
+shader_parameter/albedo_texture_size = Vector2i(0, 0)
+shader_parameter/point_size = 1.0
+shader_parameter/roughness = 0.0
+shader_parameter/metallic_texture_channel = Vector4(1, 0, 0, 0)
+shader_parameter/specular = 0.5
+shader_parameter/metallic = 0.0
+shader_parameter/texture_refraction = SubResource("NoiseTexture2D_tkp5j")
+shader_parameter/refraction = 0.05
+shader_parameter/refraction_texture_channel = Vector4(1, 0, 0, 0)
+shader_parameter/texture_normal = SubResource("NoiseTexture2D_tkp5j")
+shader_parameter/normal_scale = 1.0
+shader_parameter/uv1_blend_sharpness = 1.0
+shader_parameter/uv1_scale = Vector3(0.04, 0.04, 0.04)
+shader_parameter/uv1_offset = Vector3(0, 0, 0)
+shader_parameter/uv2_scale = Vector3(1, 1, 1)
+shader_parameter/uv2_offset = Vector3(0, 0, 0)
+
+[sub_resource type="BoxMesh" id="BoxMesh_c1s36"]
+material = SubResource("ShaderMaterial_a6oc3")
+size = Vector3(10, 1.6064453, 13.195801)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_c1s36"]
+size = Vector3(8.279297, 1, 13.893807)
+
+[node name="waterlayer" type="Node3D" unique_id=257027853]
+script = ExtResource("1_0u2of")
+
+[node name="water" type="MeshInstance3D" parent="." unique_id=2097049435]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.6274297, -0.15063477)
+mesh = SubResource("BoxMesh_c1s36")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=1574444413]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.08611488, -0.38793945, 6.995)
+use_collision = true
+size = Vector3(11.89209, 1.7758789, 1)
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="." unique_id=1326814454]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05845833, -0.4206543, -7.198564)
+use_collision = true
+size = Vector3(12.067001, 1.8413086, 0.953125)
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="." unique_id=286649933]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.622677, -0.40020752, -0.14569092)
+use_collision = true
+size = Vector3(1, 1.800415, 15.0633545)
+
+[node name="CSGBox3D4" type="CSGBox3D" parent="." unique_id=1909586781]
+transform = Transform3D(0.009946139, 0, 0.9999505, 0, 1, 0, -0.9999505, 0, 0.009946139, 5.3913646, -0.3774414, 0)
+use_collision = true
+size = Vector3(15, 1.7548828, 1)
+
+[node name="CSGBox3D5" type="CSGBox3D" parent="." unique_id=335948902]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.11693764, -1.555407, -0.06493664)
+use_collision = true
+size = Vector3(11.953735, 0.45462036, 15.119873)
+
+[node name="watervolume" type="Area3D" parent="." unique_id=683319908]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="watervolume" unique_id=607856737]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9649354, -0.2263999, 0.07159662)
+shape = SubResource("BoxShape3D_c1s36")
+
+[node name="CSGPolygon3D" type="CSGPolygon3D" parent="." unique_id=935559769]
+transform = Transform3D(-0.08946494, 0.83727777, 0.5394086, -0.05317864, 0.53679246, -0.84203684, -0.99456936, -0.1040178, -0.0034988085, 4.2625413, -0.69412065, 0.15204489)
+autosmooth = true
+use_collision = true
+polygon = PackedVector2Array(-6.218867, -0.8924267, -6.4962964, 0.18785572, 6.7916193, 1.7634735, 5.943005, 0.07571483)
+smooth_faces = true
+
+[connection signal="body_entered" from="watervolume" to="." method="_on_watervolume_body_entered"]
+[connection signal="body_exited" from="watervolume" to="." method="_on_watervolume_body_exited"]
