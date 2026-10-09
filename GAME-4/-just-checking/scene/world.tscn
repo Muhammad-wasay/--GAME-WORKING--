@@ -1,5 +1,6 @@
 [gd_scene format=3 uid="uid://kqaaohwe8uw8"]
 
+[ext_resource type="Texture2D" uid="uid://cu0yac35b5weg" path="res://import/textures/grass/brown_mud_leaves_01_diff_1k.jpg" id="1_jsnws"]
 [ext_resource type="Shader" uid="uid://0gqsipfp5pbw" path="res://new_shader.gdshader" id="1_pjass"]
 [ext_resource type="PackedScene" uid="uid://bxo6p58nl50th" path="res://scene/Character.tscn" id="2_txmk2"]
 [ext_resource type="PackedScene" uid="uid://7q5ss7xi7h5e" path="res://brutalist_building.glb" id="2_w4qq1"]
@@ -23,6 +24,7 @@ fog_density = 1.0
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_c1s36"]
 albedo_color = Color(0.3167847, 0.31678474, 0.3167847, 1)
+albedo_texture = ExtResource("1_jsnws")
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_ehi2k"]
 render_priority = 0
@@ -112,7 +114,7 @@ material = SubResource("StandardMaterial3D_hcb8y")
 [node name="Sketchfab_Scene" parent="Node3D" unique_id=937551499 instance=ExtResource("2_w4qq1")]
 transform = Transform3D(-0.9997699, 0, 0.02144998, 0, 1, 0, -0.02144998, 0, -0.9997699, -3.6695256, -0.030603409, 4.908205)
 
-[node name="Object_4" parent="Node3D/Sketchfab_Scene/Sketchfab_model/root/GLTF_SceneRootNode/Cube_0" parent_id_path=PackedInt32Array(937551499, 500030618) index="0" unique_id=1623010236]
+[node name="Object_4" parent="Node3D/Sketchfab_Scene/Sketchfab_model/root/GLTF_SceneRootNode/Cube_0" parent_id_path=PackedInt32Array(937551499, 1684512512) index="0" unique_id=1788768108]
 transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
 
 [node name="box2" type="CSGBox3D" parent="Node3D/Sketchfab_Scene" unique_id=136620877]
