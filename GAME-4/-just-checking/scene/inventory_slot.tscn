@@ -1,0 +1,67 @@
+[gd_scene format=3 uid="uid://c6v2n7w84mslt"]
+
+[ext_resource type="Script" path="res://script/inventory_slot.gd" id="1_slot"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_norm"]
+bg_color = Color(0.12, 0.12, 0.15, 0.82)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.35, 0.35, 0.42, 0.85)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sel"]
+bg_color = Color(0.18, 0.18, 0.25, 0.95)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.843137, 0, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+shadow_color = Color(1, 0.843137, 0, 0.35)
+shadow_size = 4
+
+[node name="InventorySlot" type="PanelContainer"]
+custom_minimum_size = Vector2(68, 68)
+theme_override_styles/panel = SubResource("StyleBoxFlat_norm")
+script = ExtResource("1_slot")
+normal_style = SubResource("StyleBoxFlat_norm")
+selected_style = SubResource("StyleBoxFlat_sel")
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 6
+
+[node name="Icon" type="TextureRect" parent="Margin"]
+layout_mode = 2
+expand_mode = 1
+stretch_mode = 5
+
+[node name="SlotNum" type="Label" parent="."]
+layout_mode = 2
+size_flags_horizontal = 0
+size_flags_vertical = 0
+theme_override_colors/font_color = Color(0.7, 0.7, 0.75, 0.7)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 0.8)
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 11
+text = "1"
+
+[node name="CountLabel" type="Label" parent="."]
+layout_mode = 2
+size_flags_horizontal = 8
+size_flags_vertical = 8
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 4
+theme_override_font_sizes/font_size = 14

@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://coh4ly6op5irx"
-path="res://.godot/imported/Pistol Kneel To Stand.fbx-8686a07e7ff913297a6b4112effd0215.scn"
+path="res://.godot/imported/Pistol Kneel To Stand.fbx-dd1c3898e4ffab48a509cfdd2e724e8f.scn"
 
 [deps]
 
-source_file="res://import/gun/gun aimation/Pistol Kneel To Stand.fbx"
-dest_files=["res://.godot/imported/Pistol Kneel To Stand.fbx-8686a07e7ff913297a6b4112effd0215.scn"]
+source_file="res://import/models/gun/gun aimation/Pistol Kneel To Stand.fbx"
+dest_files=["res://.godot/imported/Pistol Kneel To Stand.fbx-dd1c3898e4ffab48a509cfdd2e724e8f.scn"]
 
 [params]
 

@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://bbavp08gjim7c"
-path="res://.godot/imported/Pistol Walk.fbx-abf761f7c18fbd7047c0d97b47d63d0d.scn"
+path="res://.godot/imported/Pistol Walk.fbx-33c4a2399811d0c6f4deee1f549467dc.scn"
 
 [deps]
 
-source_file="res://import/gun/gun aimation/Pistol Walk.fbx"
-dest_files=["res://.godot/imported/Pistol Walk.fbx-abf761f7c18fbd7047c0d97b47d63d0d.scn"]
+source_file="res://import/models/gun/gun aimation/Pistol Walk.fbx"
+dest_files=["res://.godot/imported/Pistol Walk.fbx-33c4a2399811d0c6f4deee1f549467dc.scn"]
 
 [params]
 

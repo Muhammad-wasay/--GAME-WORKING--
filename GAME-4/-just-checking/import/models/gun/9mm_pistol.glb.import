@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://4vsqh2gmeln1"
-path="res://.godot/imported/9mm_pistol.glb-77ab0505bab9d382347049e024495ef2.scn"
+path="res://.godot/imported/9mm_pistol.glb-f751fd821918bed958b40da1610384fd.scn"
 
 [deps]
 
-source_file="res://import/gun/9mm_pistol.glb"
-dest_files=["res://.godot/imported/9mm_pistol.glb-77ab0505bab9d382347049e024495ef2.scn"]
+source_file="res://import/models/gun/9mm_pistol.glb"
+dest_files=["res://.godot/imported/9mm_pistol.glb-f751fd821918bed958b40da1610384fd.scn"]
 
 [params]
 

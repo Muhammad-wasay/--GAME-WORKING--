@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://66vseeadhrpj"
-path="res://.godot/imported/pistol jump.fbx-60bb7537df5d4a8777bd66aa236000e6.scn"
+path="res://.godot/imported/pistol jump.fbx-3332fdc890e4087768bb3f5869da6ed1.scn"
 
 [deps]
 
-source_file="res://import/gun/gun aimation/pistol jump.fbx"
-dest_files=["res://.godot/imported/pistol jump.fbx-60bb7537df5d4a8777bd66aa236000e6.scn"]
+source_file="res://import/models/gun/gun aimation/pistol jump.fbx"
+dest_files=["res://.godot/imported/pistol jump.fbx-3332fdc890e4087768bb3f5869da6ed1.scn"]
 
 [params]
 

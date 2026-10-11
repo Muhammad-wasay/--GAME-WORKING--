@@ -1,15 +1,15 @@
 [remap]
 
-importer="scene"
+importer="ArrayMesh"
 importer_version=1
-type="PackedScene"
+type="ArrayMesh"
 uid="uid://dmlw1wakooqcn"
-path="res://.godot/imported/realistic_cave_2.0.glb-f50e0ee130441ddac8b97a08b6fc5ec2.scn"
+path="res://.godot/imported/realistic_cave_2.0.glb-f50e0ee130441ddac8b97a08b6fc5ec2.res"
 
 [deps]
 
 source_file="res://import/models/cave/realistic_cave_2.0.glb"
-dest_files=["res://.godot/imported/realistic_cave_2.0.glb-f50e0ee130441ddac8b97a08b6fc5ec2.scn"]
+dest_files=["res://.godot/imported/realistic_cave_2.0.glb-f50e0ee130441ddac8b97a08b6fc5ec2.res"]
 
 [params]
 

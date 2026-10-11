@@ -3,32 +3,30 @@
 [ext_resource type="Script" uid="uid://bmhoiatel4owh" path="res://script/character.gd" id="1_5onbe"]
 [ext_resource type="PackedScene" uid="uid://j5laplvlciq4" path="res://Y Bot.fbx" id="1_v815p"]
 [ext_resource type="Animation" uid="uid://bkqu6s7lvxmsl" path="res://animations/idle_2.anim" id="2_0t8wp"]
+[ext_resource type="Shader" uid="uid://bbs6jp4rq3qua" path="res://cell.gdshader" id="2_d1faw"]
 [ext_resource type="Animation" uid="uid://ddurtq8gkwt70" path="res://animations/offensive_idle.anim" id="3_5onbe"]
-[ext_resource type="Shader" uid="uid://0gqsipfp5pbw" path="res://new_shader.gdshader" id="3_gqc62"]
 [ext_resource type="Animation" uid="uid://15jyocskglb1" path="res://animations/run.anim" id="4_gqc62"]
-[ext_resource type="Animation" uid="uid://b0ucw0flutpsj" path="res://animations/crouch_idle.anim" id="4_nnmhd"]
-[ext_resource type="Animation" uid="uid://dmnfvvi5u76hd" path="res://animations/crouch_to_up.anim" id="5_5ks12"]
+[ext_resource type="Animation" uid="uid://dahk4psnk2b6m" path="res://animations/crouch_idle.anim" id="4_nnmhd"]
+[ext_resource type="Animation" uid="uid://bdn0crwfg7fv4" path="res://animations/crouch_to_up.anim" id="5_5ks12"]
 [ext_resource type="Animation" uid="uid://cvvomdppvcsxd" path="res://animations/standing_brief_idle.anim" id="5_b7ky5"]
 [ext_resource type="Animation" uid="uid://d4ews0n51ec42" path="res://animations/walking.anim" id="6_hukdd"]
-[ext_resource type="Animation" uid="uid://dabudxd1d5px" path="res://animations/crouch_walking.anim" id="6_j4c87"]
+[ext_resource type="Animation" uid="uid://8iy4e8onfuvl" path="res://animations/crouch_walking.anim" id="6_j4c87"]
 [ext_resource type="Animation" uid="uid://2t5cudbckfcr" path="res://animations/walking_backward.anim" id="7_nnmhd"]
-[ext_resource type="Animation" uid="uid://iqgpjbugcgys" path="res://animations/jump.anim" id="8_d1faw"]
-[ext_resource type="Animation" uid="uid://ch82eei3huixp" path="res://animations/swimming.anim" id="12_j4c87"]
-[ext_resource type="Animation" uid="uid://dnkhtou5g42tv" path="res://animations/water_idle.anim" id="15_d1faw"]
+[ext_resource type="Animation" uid="uid://b6c8g8w7i1spf" path="res://animations/jump.anim" id="8_d1faw"]
+[ext_resource type="Animation" uid="uid://cseddjqllrlb3" path="res://animations/swimming.anim" id="12_j4c87"]
+[ext_resource type="Animation" uid="uid://f1xghghpk4t3" path="res://animations/water_idle.anim" id="15_d1faw"]
+[ext_resource type="PackedScene" uid="uid://d38g5m3way1ql" path="res://scene/hotbar.tscn" id="16_hotbar"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_kvo4g"]
+render_priority = 0
+shader = ExtResource("2_d1faw")
+shader_parameter/albedo = Color(1, 1, 1, 1)
+shader_parameter/cutoff = 0.5
+shader_parameter/smoothing = 0.02
 
 [sub_resource type="CylinderShape3D" id="CylinderShape3D_c1s36"]
 height = 1.2316895
 radius = 0.24560547
-
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_0bq2d"]
-render_priority = 0
-shader = ExtResource("3_gqc62")
-shader_parameter/shadow_color = Color(0, 0, 0, 1)
-shader_parameter/shadow_thickness = 1.5
-
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kckw1"]
-next_pass = SubResource("ShaderMaterial_0bq2d")
-albedo_color = Color(0, 1, 1, 1)
 
 [sub_resource type="AnimationLibrary" id="AnimationLibrary_5ks12"]
 _data = {
@@ -48,6 +46,7 @@ _data = {
 
 [node name="Player" type="CharacterBody3D" unique_id=890759848]
 script = ExtResource("1_5onbe")
+toon_material = SubResource("ShaderMaterial_kvo4g")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=474317093]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.60018206, 0)
@@ -58,7 +57,7 @@ transform = Transform3D(0.8, 0, 0, 0, 0.8, 0, 0, 0, 0.8, 0, 0, 0)
 
 [node name="person" parent="visuals" unique_id=2047199234 instance=ExtResource("1_v815p")]
 
-[node name="Skeleton3D" parent="visuals/person" index="0" unique_id=1085093448]
+[node name="Skeleton3D" parent="visuals/person" index="0" unique_id=949446172]
 bones/0/position = Vector3(0.025286853, 0.9998358, -0.0987458)
 bones/0/rotation = Quaternion(0.30185127, -0.014145263, -0.005392515, 0.95323485)
 bones/1/rotation = Quaternion(-0.067712754, 0.0151517205, 0.0024364688, 0.99758685)
@@ -68,9 +67,8 @@ bones/3/position = Vector3(1.931492e-13, 0.13458836, 6.3143935e-15)
 bones/3/rotation = Quaternion(0.060976826, 0.018940303, -0.0052230596, 0.99794585)
 bones/4/rotation = Quaternion(-0.04536886, 0.008784399, -0.017608993, 0.99877656)
 bones/5/rotation = Quaternion(-0.1960567, -0.038184144, -0.006883745, 0.97982466)
-bones/7/rotation = Quaternion(-0.5248344, -0.4963528, 0.51691663, -0.45932558)
 bones/8/position = Vector3(7.632783e-17, 0.12922287, 4.440892e-16)
-bones/8/rotation = Quaternion(0.025715511, -0.32702404, 0.3319973, 0.8844048)
+bones/8/rotation = Quaternion(-0.010451819, -0.0010627186, 0.10115047, 0.99481565)
 bones/8/scale = Vector3(1, 0.99999994, 1)
 bones/9/position = Vector3(1.3859948e-07, 0.2740468, -4.440892e-16)
 bones/9/rotation = Quaternion(-4.66502e-08, -5.6571164e-08, 0.6662076, 0.74576634)
@@ -102,14 +100,12 @@ bones/24/rotation = Quaternion(0.000612305, -4.8692506e-08, -6.280301e-05, 0.999
 bones/25/position = Vector3(-7.119305e-15, 0.03307312, -6.461498e-13)
 bones/25/rotation = Quaternion(0.3255858, -2.1226467e-07, -0.03929183, 0.94469583)
 bones/27/position = Vector3(0.04725837, 0.10908192, 0.0022613215)
-bones/27/rotation = Quaternion(0.03497017, -0.001107912, 0.005329942, 0.9993735)
+bones/27/rotation = Quaternion(2.8521122e-06, -3.0577734e-09, 0.0001410514, 1)
 bones/28/position = Vector3(-9.7144515e-17, 0.04136657, 1.9984014e-14)
-bones/28/rotation = Quaternion(0.023979848, -8.159303e-08, -0.0024575016, 0.9997094)
+bones/28/rotation = Quaternion(-5.954488e-06, 2.1905608e-09, -0.000367884, 0.99999994)
 bones/29/position = Vector3(4.385381e-15, 0.025948344, -8.21565e-15)
-bones/29/rotation = Quaternion(0.016806412, 7.820898e-08, -0.0017222144, 0.99985737)
-bones/31/rotation = Quaternion(0.42830193, -0.56329757, 0.5709965, 0.41619253)
+bones/29/rotation = Quaternion(3.6591703e-06, 8.409115e-10, 0.00022980936, 1)
 bones/32/position = Vector3(2.7755576e-17, 0.12922287, -1.110223e-15)
-bones/32/rotation = Quaternion(0.1234321, 0.27069208, -0.22002263, 0.92902124)
 bones/33/position = Vector3(4.1642474e-11, 0.2740468, 0)
 bones/33/rotation = Quaternion(1.9561878e-11, 7.6613794e-08, -0.6862117, 0.7274019)
 bones/34/position = Vector3(1.2838647e-07, 0.27614462, 1.54924e-07)
@@ -142,12 +138,10 @@ bones/49/rotation = Quaternion(0.02486298, 7.257822e-09, 0.0020253663, 0.9996888
 bones/51/position = Vector3(-0.047258332, 0.10908195, 0.0022613215)
 bones/51/rotation = Quaternion(-0.0060826805, -0.0004314798, 0.065247096, 0.9978505)
 bones/52/position = Vector3(-1.3877788e-17, 0.041366503, 8.0269125e-13)
-bones/52/rotation = Quaternion(0.007375443, 1.6345728e-08, 0.0006008959, 0.99997264)
+bones/52/rotation = Quaternion(-2.0940528e-21, 0, 1.0394375e-05, 1)
 bones/53/position = Vector3(-3.9496184e-14, 0.02594841, -2.533529e-13)
-bones/53/rotation = Quaternion(0.097714834, 5.2064596e-08, 0.007960004, 0.99518263)
-bones/55/rotation = Quaternion(-0.057529237, 0.68569726, 0.65709335, -0.30779552)
+bones/53/rotation = Quaternion(1.0671668e-21, 0, -1.0428465e-05, 1)
 bones/56/position = Vector3(-5.689893e-16, 0.40599436, 1.1657342e-15)
-bones/56/rotation = Quaternion(-0.72583425, -0.035200473, -0.07600731, 0.6827507)
 bones/57/position = Vector3(-5.551115e-17, 0.42099026, 2.220446e-16)
 bones/57/rotation = Quaternion(0.56123316, -0.0767327, 0.18876114, 0.8021838)
 bones/58/position = Vector3(-6.938894e-17, 0.1572156, -1.6653345e-16)
@@ -160,10 +154,7 @@ bones/62/rotation = Quaternion(0.5588245, 0.004473569, 0.046678185, 0.8279591)
 bones/63/position = Vector3(1.3877788e-17, 0.1572156, 1.3877788e-17)
 bones/63/rotation = Quaternion(0.23614295, 0.03209626, 0.015100222, 0.9710707)
 
-[node name="Alpha_Surface" parent="visuals/person/Skeleton3D" index="0" unique_id=717328816]
-surface_material_override/0 = SubResource("StandardMaterial3D_kckw1")
-
-[node name="AnimationPlayer" parent="visuals/person" index="1" unique_id=991136961]
+[node name="AnimationPlayer" parent="visuals/person" index="1" unique_id=1497331706]
 libraries/NewLib = SubResource("AnimationLibrary_5ks12")
 playback_default_blend_time = 0.2
 
@@ -173,5 +164,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3351324, 0)
 [node name="Camera3D" type="Camera3D" parent="camera_mount" unique_id=227528143]
 transform = Transform3D(-0.99928623, -0.009931744, 0.03644801, -0.0036674645, 0.98576945, 0.16806304, -0.037598494, 0.1678094, -0.98510224, -0.27934003, 0.26908088, -1.2600669)
 current = true
+
+[node name="HotbarUI" parent="." unique_id=1864062314 instance=ExtResource("16_hotbar")]
 
 [editable path="visuals/person"]

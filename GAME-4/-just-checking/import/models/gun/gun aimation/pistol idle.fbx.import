@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dp71qgnmijhop"
-path="res://.godot/imported/pistol idle.fbx-d4cfbbc9e47a0c7290df4362931c06e4.scn"
+path="res://.godot/imported/pistol idle.fbx-e29f2c4b5daf040c7b2332545fa8c74d.scn"
 
 [deps]
 
-source_file="res://import/gun/gun aimation/pistol idle.fbx"
-dest_files=["res://.godot/imported/pistol idle.fbx-d4cfbbc9e47a0c7290df4362931c06e4.scn"]
+source_file="res://import/models/gun/gun aimation/pistol idle.fbx"
+dest_files=["res://.godot/imported/pistol idle.fbx-e29f2c4b5daf040c7b2332545fa8c74d.scn"]
 
 [params]
 

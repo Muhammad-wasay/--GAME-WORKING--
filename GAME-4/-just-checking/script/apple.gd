@@ -35,7 +35,7 @@ func _on_body_exited(body: Node3D) -> void:
 		if interaction_label:
 			interaction_label.visible = false
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if player_in_range and not is_picked_up:
 		if Input.is_action_just_pressed("interact"):
 			pick_up()
@@ -44,6 +44,25 @@ func _process(delta: float) -> void:
 			drop_item()
 
 func pick_up() -> void:
+	if is_picked_up:
+		return
+	
+	# Agar player ke paas inventory system hai toh inventory mein daal do
+	if player_node and player_node.has_method("add_to_inventory"):
+		var item_data = {
+			"id": "apple",
+			"name": "Apple",
+			"icon": preload("res://import/UI/apple_icon.png"),
+			"scene": load("res://scene/apple.tscn"),
+			"count": 1
+		}
+		var added = player_node.add_to_inventory(item_data)
+		if added:
+			print("Apple inventory mein chala gaya!")
+			queue_free()
+			return
+	
+	# Fallback (agar inventory na ho)
 	is_picked_up = true
 	player_in_range = false
 	

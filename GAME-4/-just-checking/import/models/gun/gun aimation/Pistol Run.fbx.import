@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c5828m7glm226"
-path="res://.godot/imported/Pistol Run.fbx-a2ae9bc3ee47eba73bb376bcbe5d1e57.scn"
+path="res://.godot/imported/Pistol Run.fbx-0512451592f28740c3554bf6f9adfefb.scn"
 
 [deps]
 
-source_file="res://import/gun/gun aimation/Pistol Run.fbx"
-dest_files=["res://.godot/imported/Pistol Run.fbx-a2ae9bc3ee47eba73bb376bcbe5d1e57.scn"]
+source_file="res://import/models/gun/gun aimation/Pistol Run.fbx"
+dest_files=["res://.godot/imported/Pistol Run.fbx-0512451592f28740c3554bf6f9adfefb.scn"]
 
 [params]
 

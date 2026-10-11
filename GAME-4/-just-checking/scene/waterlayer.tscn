@@ -151,43 +151,11 @@ script = ExtResource("1_0u2of")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.6274297, -0.15063477)
 mesh = SubResource("BoxMesh_c1s36")
 
-[node name="CSGBox3D" type="CSGBox3D" parent="." unique_id=1574444413]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.08611488, -0.38793945, 6.995)
-use_collision = true
-size = Vector3(11.89209, 1.7758789, 1)
-
-[node name="CSGBox3D2" type="CSGBox3D" parent="." unique_id=1326814454]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.05845833, -0.4206543, -7.198564)
-use_collision = true
-size = Vector3(12.067001, 1.8413086, 0.953125)
-
-[node name="CSGBox3D3" type="CSGBox3D" parent="." unique_id=286649933]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.622677, -0.40020752, -0.14569092)
-use_collision = true
-size = Vector3(1, 1.800415, 15.0633545)
-
-[node name="CSGBox3D4" type="CSGBox3D" parent="." unique_id=1909586781]
-transform = Transform3D(0.009946139, 0, 0.9999505, 0, 1, 0, -0.9999505, 0, 0.009946139, 5.3913646, -0.3774414, 0)
-use_collision = true
-size = Vector3(15, 1.7548828, 1)
-
-[node name="CSGBox3D5" type="CSGBox3D" parent="." unique_id=335948902]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.11693764, -1.555407, -0.06493664)
-use_collision = true
-size = Vector3(11.953735, 0.45462036, 15.119873)
-
 [node name="watervolume" type="Area3D" parent="." unique_id=683319908]
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="watervolume" unique_id=607856737]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9649354, -0.2263999, 0.07159662)
 shape = SubResource("BoxShape3D_c1s36")
-
-[node name="CSGPolygon3D" type="CSGPolygon3D" parent="." unique_id=935559769]
-transform = Transform3D(-0.08946494, 0.83727777, 0.5394086, -0.05317864, 0.53679246, -0.84203684, -0.99456936, -0.1040178, -0.0034988085, 4.2625413, -0.69412065, 0.15204489)
-autosmooth = true
-use_collision = true
-polygon = PackedVector2Array(-6.218867, -0.8924267, -6.4962964, 0.18785572, 6.7916193, 1.7634735, 5.943005, 0.07571483)
-smooth_faces = true
 
 [connection signal="body_entered" from="watervolume" to="." method="_on_watervolume_body_entered"]
 [connection signal="body_exited" from="watervolume" to="." method="_on_watervolume_body_exited"]

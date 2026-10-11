@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://3jt4g3n3f1gv"
-path.s3tc="res://.godot/imported/9mm_pistol_0.png-ee843e4936b9a37c0feef269abaa6349.s3tc.ctex"
+path.s3tc="res://.godot/imported/9mm_pistol_0.png-adb5b974d6c16625907e3bd66d1b0761.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -14,8 +14,8 @@ generator_parameters={
 
 [deps]
 
-source_file="res://import/gun/9mm_pistol_0.png"
-dest_files=["res://.godot/imported/9mm_pistol_0.png-ee843e4936b9a37c0feef269abaa6349.s3tc.ctex"]
+source_file="res://import/models/gun/9mm_pistol_0.png"
+dest_files=["res://.godot/imported/9mm_pistol_0.png-adb5b974d6c16625907e3bd66d1b0761.s3tc.ctex"]
 
 [params]
 

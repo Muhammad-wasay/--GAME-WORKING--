@@ -1,0 +1,73 @@
+[gd_scene format=3 uid="uid://d38g5m3way1ql"]
+
+[ext_resource type="Script" path="res://script/hotbar.gd" id="1_hotbar"]
+[ext_resource type="PackedScene" uid="uid://c6v2n7w84mslt" path="res://scene/inventory_slot.tscn" id="2_slot"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hotbar_bg"]
+bg_color = Color(0.08, 0.08, 0.1, 0.75)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.28, 0.28, 0.34, 0.8)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+shadow_color = Color(0, 0, 0, 0.4)
+shadow_size = 6
+
+[node name="HotbarUI" type="CanvasLayer"]
+script = ExtResource("1_hotbar")
+
+[node name="Control" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="Control"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -160.0
+offset_top = -100.0
+offset_right = 160.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="Control/MarginContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hotbar_bg")
+
+[node name="Margin" type="MarginContainer" parent="Control/MarginContainer/PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 8
+theme_override_constants/margin_bottom = 8
+
+[node name="SlotsContainer" type="HBoxContainer" parent="Control/MarginContainer/PanelContainer/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="InventorySlot1" parent="Control/MarginContainer/PanelContainer/Margin/SlotsContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+
+[node name="InventorySlot2" parent="Control/MarginContainer/PanelContainer/Margin/SlotsContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+
+[node name="InventorySlot3" parent="Control/MarginContainer/PanelContainer/Margin/SlotsContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
+
+[node name="InventorySlot4" parent="Control/MarginContainer/PanelContainer/Margin/SlotsContainer" instance=ExtResource("2_slot")]
+layout_mode = 2
