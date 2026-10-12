@@ -1,15 +1,16 @@
 [gd_scene format=4 uid="uid://kqaaohwe8uw8"]
 
 [ext_resource type="Material" uid="uid://lh133t53myhi" path="res://material/grass.tres" id="1_0tg4p"]
-[ext_resource type="Texture2D" uid="uid://bgc5rl13dopuj" path="res://import/addons/proton_scatter/demos/assets/textures/sky_2.png" id="1_hcb8y"]
 [ext_resource type="Shader" uid="uid://0gqsipfp5pbw" path="res://new_shader.gdshader" id="1_pjass"]
-[ext_resource type="PackedScene" uid="uid://bxo6p58nl50th" path="res://scene/Character.tscn" id="2_txmk2"]
+[ext_resource type="Texture2D" uid="uid://cy7g0o0uu3xnk" path="res://import/sky/fantasy_sky_background_0.jpg" id="1_y3jn2"]
+[ext_resource type="PackedScene" uid="uid://bxo6p58nl50th" path="res://scene/Roy.tscn" id="2_txmk2"]
 [ext_resource type="PackedScene" uid="uid://cw2tu3tu6h48p" path="res://scene/apple.tscn" id="4_m5mgf"]
+[ext_resource type="Texture2D" uid="uid://b35v4hidtn4gx" path="res://import/6895fa029e42b3b3578c044d44b7e095/texture_pbr_20250901.png" id="4_y3jn2"]
 [ext_resource type="PackedScene" uid="uid://b0k84ixu2q0cd" path="res://scene/terrain.scn" id="7_hcb8y"]
 [ext_resource type="PackedScene" uid="uid://6gxiul1pw13t" path="res://import/addons/proton_scatter/demos/assets/models/fence_planks.glb" id="7_y3jn2"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_2kjcg"]
-panorama = ExtResource("1_hcb8y")
+panorama = ExtResource("1_y3jn2")
 
 [sub_resource type="Sky" id="Sky_txmk2"]
 sky_material = SubResource("PanoramaSkyMaterial_2kjcg")
@@ -20,6 +21,50 @@ sky = SubResource("Sky_txmk2")
 fog_mode = 1
 fog_light_color = Color(0.520868, 0.5561465, 0.6110244, 1)
 fog_density = 1.0
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_7ghph"]
+render_priority = 0
+shader = ExtResource("1_pjass")
+shader_parameter/shadow_color = Color(0, 0, 0, 1)
+shader_parameter/shadow_thickness = 1.0
+
+[sub_resource type="Shader" id="Shader_yur6x"]
+code = "shader_type spatial;
+render_mode specular_schlick_ggx;
+
+// Color aur Texture ke liye uniforms
+uniform vec4 albedo : source_color = vec4(1.0, 1.0, 1.0, 1.0);
+uniform sampler2D texture_albedo : source_color, filter_linear_mipmap, repeat_enable;
+
+// Cel-shading ki sharpness aur bands control karne ke liye
+uniform float cutoff : hint_range(0.0, 1.0) = 0.5;
+uniform float smoothing : hint_range(0.0, 0.1) = 0.02;
+
+void fragment() {
+    // Model par texture aur color apply karna
+    vec4 col = texture(texture_albedo, UV) * albedo;
+    ALBEDO = col.rgb;
+}
+
+void light() {
+    // Light direction aur normal ka angle nikalna
+    float normal_dot_light = dot(NORMAL, LIGHT);
+    
+    // Smoothstep se cel-shading ke steps/bands banana
+    float light_level = smoothstep(cutoff - smoothing, cutoff + smoothing, normal_dot_light);
+    
+    // Final diffuse light calculation
+    DIFFUSE_LIGHT += ALBEDO * LIGHT_COLOR * ATTENUATION * light_level;
+}"
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_hcb8y"]
+render_priority = 0
+next_pass = SubResource("ShaderMaterial_7ghph")
+shader = SubResource("Shader_yur6x")
+shader_parameter/albedo = Color(1, 1, 1, 1)
+shader_parameter/texture_albedo = ExtResource("4_y3jn2")
+shader_parameter/cutoff = 0.5
+shader_parameter/smoothing = 0.02
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_v56vp"]
 
@@ -81,19 +126,17 @@ use_collision = true
 size = Vector3(1.2224121, 0.08605957, 0.2794587)
 
 [node name="player" parent="." unique_id=890759848 instance=ExtResource("2_txmk2")]
-transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, 12.192402, 0.97894573, -21.169706)
+transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, 22.861198, 0.97894573, -34.28765)
+toon_material = SubResource("ShaderMaterial_hcb8y")
 
 [node name="apple2" parent="." unique_id=1925936510 instance=ExtResource("4_m5mgf")]
-transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, 1.0320263, 0.086722374, -2.9870615)
-visible = false
+transform = Transform3D(0.05, 0, 0, 0, 0.05, 0, 0, 0, 0.05, 16.24584, 0.6524029, -23.183205)
 
 [node name="apple" parent="." unique_id=309267002 instance=ExtResource("4_m5mgf")]
-transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, 0, 0.086722374, -2.9870615)
-visible = false
+transform = Transform3D(0.05, 0, 0, 0, 0.042759538, 0.025915667, 0, -0.025915667, 0.042759538, 15.092141, 0.570454, -22.944736)
 
 [node name="apple3" parent="." unique_id=651493764 instance=ExtResource("4_m5mgf")]
-transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, -1.9934759, 0, -3.8358338)
-visible = false
+transform = Transform3D(0.051, 0, 0, 0, 0.051, 0, 0, 0, 0.051, 15.576934, 0.63986707, -23.313826)
 
 [node name="fence_planks2" parent="." unique_id=1470292068 instance=ExtResource("7_y3jn2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12819564, -0.0049354844, -0.182105)
@@ -103,6 +146,5 @@ mesh = SubResource("ArrayMesh_yur6x")
 surface_material_override/0 = SubResource("StandardMaterial3D_xk8e0")
 
 [node name="Terrain" parent="." unique_id=1667304145 instance=ExtResource("7_hcb8y")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 
 [editable path="fence_planks2"]

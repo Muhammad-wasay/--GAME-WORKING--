@@ -139,7 +139,7 @@ shader_parameter/uv2_offset = Vector3(0, 0, 0)
 
 [sub_resource type="BoxMesh" id="BoxMesh_c1s36"]
 material = SubResource("ShaderMaterial_a6oc3")
-size = Vector3(10, 1.6064453, 13.195801)
+size = Vector3(8.447388, 1.6064453, 13.8479)
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_c1s36"]
 size = Vector3(8.279297, 1, 13.893807)
@@ -148,7 +148,7 @@ size = Vector3(8.279297, 1, 13.893807)
 script = ExtResource("1_0u2of")
 
 [node name="water" type="MeshInstance3D" parent="." unique_id=2097049435]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.6274297, -0.15063477)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.77630615, -0.6274297, 0.17541504)
 mesh = SubResource("BoxMesh_c1s36")
 
 [node name="watervolume" type="Area3D" parent="." unique_id=683319908]
