@@ -1,0 +1,32 @@
+[gd_scene format=3 uid="uid://ckeypickup001"]
+
+[ext_resource type="Script" path="res://script/key_pickup.gd" id="1_keyscript"]
+[ext_resource type="PackedScene" uid="uid://qaln6pvuanvs" path="res://import/models/cage and key/key.glb" id="2_keymodel"]
+[ext_resource type="PackedScene" uid="uid://dhmp0np80xtl3" path="res://scene/item_interaction.tscn" id="3_interact"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_keydetect"]
+radius = 1.35
+
+[node name="KeyPickup" type="Node3D"]
+script = ExtResource("1_keyscript")
+
+[node name="KeyVisual" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.28, 0)
+
+[node name="KeyModel" parent="KeyVisual" instance=ExtResource("2_keymodel")]
+transform = Transform3D(0.28, 0, 0, 0, 0.28, 0, 0, 0, 0.28, 0, 0, 0)
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+light_color = Color(1, 0.85, 0.28, 1)
+light_energy = 3.5
+omni_range = 4.5
+
+[node name="Area3D" type="Area3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0)
+shape = SubResource("SphereShape3D_keydetect")
+
+[node name="item_interaction" parent="." instance=ExtResource("3_interact")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)

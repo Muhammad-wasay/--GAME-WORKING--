@@ -1,0 +1,119 @@
+[gd_scene format=3 uid="uid://cendscreen001"]
+
+[ext_resource type="Script" path="res://script/end_screen.gd" id="1_endscript"]
+[ext_resource type="VideoStream" uid="uid://71ekbnghuvqj" path="res://import/sound/poster.ogv" id="2_endvideo"]
+[ext_resource type="FontFile" uid="uid://xhfgdo8plti8" path="res://import/font-text/ballad_of_dwight_frye/Ballad of Dwight Frye.ttf" id="3_font"]
+[ext_resource type="AudioStream" uid="uid://bb005rskdbeqy" path="res://import/sound/gametheme.wav" id="4_gametheme"]
+
+[node name="EndScreen" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_endscript")
+
+[node name="BlackBg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.04, 0.03, 0.05, 1)
+
+[node name="VideoStreamPlayer" type="VideoStreamPlayer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+stream = ExtResource("2_endvideo")
+expand = true
+
+[node name="CreditsPanel" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="DimOverlay" type="ColorRect" parent="CreditsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.02, 0.02, 0.03, 0.88)
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CreditsPanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -350.0
+offset_top = -180.0
+offset_right = 350.0
+offset_bottom = 180.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 24
+alignment = 1
+
+[node name="TitleLabel" type="Label" parent="CreditsPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 56
+theme_override_colors/font_color = Color(0.96, 0.82, 0.32, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.95)
+theme_override_constants/shadow_offset_x = 4
+theme_override_constants/shadow_offset_y = 4
+text = "LOST IN THE FOREST"
+horizontal_alignment = 1
+
+[node name="SubtitleLabel" type="Label" parent="CreditsPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(0.85, 0.85, 0.85, 0.95)
+text = "Made with Godot Engine"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="CreditsPanel/VBoxContainer"]
+layout_mode = 2
+
+[node name="StoryNote" type="Label" parent="CreditsPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.72, 0.88, 0.72, 0.9)
+text = "Jessica was successfully rescued! You escaped the forest alive."
+horizontal_alignment = 1
+
+[node name="HBoxContainer" type="HBoxContainer" parent="CreditsPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+alignment = 1
+
+[node name="RestartButton" type="Button" parent="CreditsPanel/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(170, 52)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 22
+text = "PLAY AGAIN"
+
+[node name="QuitButton" type="Button" parent="CreditsPanel/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(170, 52)
+layout_mode = 2
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 22
+text = "QUIT"
+
+[node name="BgMusic" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("4_gametheme")
+volume_db = -4.0

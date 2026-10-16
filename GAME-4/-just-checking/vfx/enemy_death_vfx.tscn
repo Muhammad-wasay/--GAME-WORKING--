@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://enemy_death_vfx_scene"]
+
+[ext_resource type="Script" path="res://vfx/enemy_death_vfx.gd" id="1_script"]
+
+[node name="EnemyDeathVFX" type="Node3D"]
+script = ExtResource("1_script")

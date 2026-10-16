@@ -6,9 +6,18 @@
 [ext_resource type="PackedScene" uid="uid://cw2tu3tu6h48p" path="res://scene/apple.tscn" id="4_m5mgf"]
 [ext_resource type="PackedScene" uid="uid://b0k84ixu2q0cd" path="res://scene/terrain.scn" id="7_hcb8y"]
 [ext_resource type="PackedScene" uid="uid://6gxiul1pw13t" path="res://import/addons/proton_scatter/demos/assets/models/fence_planks.glb" id="7_y3jn2"]
-[ext_resource type="PackedScene" uid="uid://bxo6p58nl50th" path="res://scene/Roy.tscn" id="7_yur6x"]
+[ext_resource type="PackedScene" uid="uid://dff5xwmdifdvk" path="res://scene/Roy.tscn" id="7_yur6x"]
 [ext_resource type="PackedScene" uid="uid://dum75afh1qd3w" path="res://scene/gun_pickup.tscn" id="10_na5tu"]
-[ext_resource type="PackedScene" uid="uid://target_box_scene" path="res://scene/target_box.tscn" id="11_targetbox"]
+[ext_resource type="PackedScene" path="res://scene/target_box.tscn" id="11_targetbox"]
+[ext_resource type="PackedScene" uid="uid://djvh1qf87lp8r" path="res://scene/enemies/enemy_1.tscn" id="12_enemy1"]
+[ext_resource type="PackedScene" uid="uid://b08cx5oig4pc1" path="res://scene/enemies/enemy_2.tscn" id="13_enemy2"]
+[ext_resource type="AudioStream" uid="uid://cv6kyo21xyljo" path="res://import/sound/game-background-sound.mp3" id="13_f345f"]
+[ext_resource type="PackedScene" uid="uid://tdmii12t5vtb" path="res://scene/OUTER-TERRAIN.scn" id="14_bqa5m"]
+[ext_resource type="PackedScene" uid="uid://bxxu24sxx2ulp" path="res://scene/enemies/enemy_3.tscn" id="14_enemy3"]
+[ext_resource type="PackedScene" uid="uid://q044mppwdf3u" path="res://scene/female.tscn" id="16_e4vd1"]
+[ext_resource type="PackedScene" uid="uid://nn85g8eh3tct" path="res://CAGE.scn" id="17_1402k"]
+[ext_resource type="Script" uid="uid://dqvj8tqcyuq4i" path="res://script/story_quest_manager.gd" id="17_storymgr"]
+[ext_resource type="PackedScene" uid="uid://bs4tpqqqsqkl3" path="res://import/models/skell/skeleton.glb" id="18_ol7uo"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_2kjcg"]
 panorama = ExtResource("1_y3jn2")
@@ -105,6 +114,7 @@ physics_material_override = SubResource("PhysicsMaterial_6jrnk")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12819564, -0.0049354844, -0.182105)
 
 [node name="fence_planks" parent="fence_planks2" index="0" unique_id=1292179126]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.504326, 0)
 mesh = SubResource("ArrayMesh_yur6x")
 surface_material_override/0 = SubResource("StandardMaterial3D_xk8e0")
 
@@ -117,16 +127,54 @@ toon_material = null
 [node name="Gun" parent="." unique_id=1037323027 instance=ExtResource("10_na5tu")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.859886, 1.5424309, -31.985037)
 
-[node name="TargetBox1" parent="." instance=ExtResource("11_targetbox")]
+[node name="TargetBox1" parent="." unique_id=1283977147 instance=ExtResource("11_targetbox")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.85, 1.2, -27.5)
 
-[node name="TargetBox2" parent="." instance=ExtResource("11_targetbox")]
+[node name="TargetBox2" parent="." unique_id=1387231401 instance=ExtResource("11_targetbox")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.8, 1.2, -27.2)
 
-[node name="TargetBox3" parent="." instance=ExtResource("11_targetbox")]
+[node name="TargetBox3" parent="." unique_id=1224001150 instance=ExtResource("11_targetbox")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.9, 1.2, -27.2)
 
-[node name="TargetBox4" parent="." instance=ExtResource("11_targetbox")]
+[node name="TargetBox4" parent="." unique_id=1323023711 instance=ExtResource("11_targetbox")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.85, 2.1, -27.5)
+
+[node name="Enemy1_Boss" parent="." unique_id=725332383 instance=ExtResource("12_enemy1")]
+transform = Transform3D(-0.5, 0, -7.54979e-08, 0, 0.5, 0, 7.54979e-08, 0, -0.5, -2.3867755, 1.0114005, 1.8448671)
+walk_speed = 0.65
+
+[node name="Enemy2_Minion" parent="." unique_id=852180277 instance=ExtResource("13_enemy2")]
+transform = Transform3D(-0.32, 0, 0, 0, 0.32, 0, 0, 0, -0.32, 21.6, 0.9, -22.2)
+walk_speed = 0.65
+
+[node name="Enemy3_Minion" parent="." unique_id=1935589875 instance=ExtResource("14_enemy3")]
+transform = Transform3D(-0.32, 0, 0, 0, 0.32, 0, 0, 0, -0.32, 26.1, 0.9, -22.2)
+
+[node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="." unique_id=1564305045]
+stream = ExtResource("13_f345f")
+
+[node name="Node3D2" parent="." unique_id=270298504 instance=ExtResource("14_bqa5m")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -77.190155, -0.9135704, -6.212082)
+
+[node name="Node3D2" parent="Node3D2" unique_id=477264913 instance=ExtResource("14_bqa5m")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.40242767, -3.1280193, 43.25614)
+
+[node name="Node3D3" parent="Node3D2" unique_id=683513206 instance=ExtResource("14_bqa5m")]
+transform = Transform3D(-0.016849717, 0, -0.999858, 0, 1, 0, 0.999858, 0, -0.016849717, 50.000824, -2.9928064, 20.341503)
+
+[node name="Node3D4" parent="Node3D2" unique_id=458700507 instance=ExtResource("14_bqa5m")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 98.57836, -1.8534489, 74.11191)
+
+[node name="StoryQuestManager" type="Node3D" parent="." unique_id=987123456]
+script = ExtResource("17_storymgr")
+
+[node name="female" parent="." unique_id=42649498 instance=ExtResource("16_e4vd1")]
+transform = Transform3D(-0.6890315, 0, 0.12343312, 0.0019252216, 0.6999148, 0.010747021, -0.12341811, 0.010918102, -0.6889477, 1.6730809, 0.8554168, 9.62198)
+
+[node name="Node3D3" parent="." unique_id=861669155 instance=ExtResource("17_1402k")]
+transform = Transform3D(-0.20670946, 0, 0.037029933, 0, 0.21000001, 0, -0.037029933, 0, -0.20670946, 1.6730809, 0.73190117, 9.62198)
+
+[node name="Sketchfab_Scene" parent="." unique_id=203484555 instance=ExtResource("18_ol7uo")]
+transform = Transform3D(0.0029382317, -0.49999136, 4.9018802e-09, -0.032463122, -0.00019076676, 0.498945, -0.49893638, -0.002932032, -0.032463685, -3.376577, 0.60273993, 10.856213)
 
 [editable path="fence_planks2"]

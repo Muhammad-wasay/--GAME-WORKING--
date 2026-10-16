@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://4tjenm55x0yg"
+path="res://.godot/imported/jessica-second-phase-voic.mp3-1ac2453970b455d66e7dd1d551c68953.mp3str"
+
+[deps]
+
+source_file="res://import/sound/msg box sounds/jessica-second-phase-voic.mp3"
+dest_files=["res://.godot/imported/jessica-second-phase-voic.mp3-1ac2453970b455d66e7dd1d551c68953.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

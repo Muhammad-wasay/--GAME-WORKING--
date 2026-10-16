@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://d237qm5o25rne"
+path="res://.godot/imported/boss_05_rise_puppets.mp3-8d70b1708090348e6754f6903478db69.mp3str"
+
+[deps]
+
+source_file="res://import/sound/msg box sounds/boss_05_rise_puppets.mp3"
+dest_files=["res://.godot/imported/boss_05_rise_puppets.mp3-8d70b1708090348e6754f6903478db69.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

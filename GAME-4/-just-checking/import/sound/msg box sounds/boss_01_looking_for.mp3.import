@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://bvi622aggmy5b"
+path="res://.godot/imported/boss_01_looking_for.mp3-77e38fcbe891c44028c06ac963fb4ac9.mp3str"
+
+[deps]
+
+source_file="res://import/sound/msg box sounds/boss_01_looking_for.mp3"
+dest_files=["res://.godot/imported/boss_01_looking_for.mp3-77e38fcbe891c44028c06ac963fb4ac9.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

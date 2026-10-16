@@ -147,8 +147,8 @@ func _enter_tree() -> void:
 		preload("res://addons/lowpolyterrain/icon.svg")
 	)
 	
-	# Enabled only while a terrain manager is selected; see _process().
-	set_process(false)
+	# Enabled to poll scene tab / empty new-scene root changes and brush viewport status.
+	set_process(true)
 
 	_initialize_editor_shortcuts()
 	_initialize_brush_appearance_settings()
@@ -170,6 +170,7 @@ func _enter_tree() -> void:
 	# [FIX] Clean connection to the native scene tab change signal
 	if not scene_changed.is_connected(_on_editor_scene_changed):
 		scene_changed.connect(_on_editor_scene_changed)
+	LowPolyTerrainManager.sync_all_editor_instances(EditorInterface.get_edited_scene_root())
 
 func _exit_tree() -> void:
 	remove_custom_type("LowPolyTerrainManager")
@@ -205,6 +206,7 @@ func _on_editor_scene_changed(new_scene_root: Node) -> void:
 	# Reset the active manager to put the plugin to sleep
 	_release_active_manager()
 	_faces_cache.clear()
+	LowPolyTerrainManager.sync_all_editor_instances(new_scene_root)
 
 	# Instantly clear UI visual fragments
 	if mouse_label:
@@ -551,7 +553,16 @@ func _get_viewport_container() -> Control:
 ## the cursor. Polling rather than the Control's mouse_exited signal, because that also fires
 ## when moving onto a child control such as the viewport toolbar, which would make the brush
 ## flicker.
+var _last_polled_scene_root: Object = null
+var _has_polled_scene_root: bool = false
+
 func _process(_delta: float) -> void:
+	var current_scene_root: Node = EditorInterface.get_edited_scene_root()
+	if not _has_polled_scene_root or current_scene_root != _last_polled_scene_root:
+		_has_polled_scene_root = true
+		_last_polled_scene_root = current_scene_root
+		LowPolyTerrainManager.sync_all_editor_instances(current_scene_root)
+
 	if active_manager == null:
 		return
 

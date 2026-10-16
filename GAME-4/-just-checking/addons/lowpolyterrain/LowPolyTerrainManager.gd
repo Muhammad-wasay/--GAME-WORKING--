@@ -789,13 +789,64 @@ var _server_backend: LowPolyTerrainServerBackend = null
 ## even after collision_group was edited in the meantime.
 var _joined_collision_group: String = ""
 
+## Weak references to every manager instantiated in the editor so scene-tab switches (including
+## clicking '+' for a brand-new empty scene where edited_scene_root is null) can immediately
+## hide terrains belonging to inactive tabs.
+static var _editor_instance_refs: Array[WeakRef] = []
 
 
 # --- AUTOMATIC INITIALIZATION PIPELINE ---
 func _init() -> void:
 	# Enforce the default shader selection the exact millisecond the node is created in the editor
-	if custom_material == null and Engine.is_editor_hint():
-		_apply_default_shader_fallback()
+	if Engine.is_editor_hint():
+		_editor_instance_refs.append(weakref(self))
+		if custom_material == null:
+			_apply_default_shader_fallback()
+
+
+## Synchronizes visibility and RenderingServer scenario attachment for all editor terrain instances
+## against the currently active edited scene root.
+static func sync_all_editor_instances(active_scene_root: Node) -> void:
+	if not Engine.is_editor_hint():
+		return
+	for i in range(_editor_instance_refs.size() - 1, -1, -1):
+		var ref: WeakRef = _editor_instance_refs[i]
+		var inst: Object = ref.get_ref() if ref != null else null
+		if inst == null or not is_instance_valid(inst):
+			_editor_instance_refs.remove_at(i)
+			continue
+		var mgr := inst as LowPolyTerrainManager
+		if mgr != null:
+			mgr.sync_editor_scene_visibility(active_scene_root)
+
+
+## Hides this terrain's server RIDs and child meshes when the editor is showing a different scene
+## tab (or a newly created empty scene tab), and restores them when its owning scene is active.
+func sync_editor_scene_visibility(active_scene_root: Node = null) -> void:
+	if not Engine.is_editor_hint():
+		return
+	var belongs_to_active_scene: bool = (
+		active_scene_root != null
+		and is_inside_tree()
+		and (self == active_scene_root or active_scene_root.is_ancestor_of(self))
+	)
+	if not belongs_to_active_scene:
+		if _server_backend != null:
+			_server_backend.on_visibility_changed(false)
+			_server_backend.detach_from_world()
+		for child in get_children():
+			if child is Node3D:
+				(child as Node3D).visible = false
+	else:
+		for child in get_children():
+			if child is LowPolyTerrainChunk or child.name == "Terrain_Assets":
+				(child as Node3D).visible = true
+			elif child.name == CHUNK_GRID_NODE_NAME:
+				(child as Node3D).visible = show_chunk_grid
+		if _server_backend != null and is_inside_tree():
+			_server_backend.attach_to_world(get_world_3d())
+			_server_backend.on_transform_changed(global_transform)
+			_server_backend.on_visibility_changed(is_visible_in_tree())
 
 
 ## Helper function to construct and assign the default terrain shader instance
@@ -856,6 +907,9 @@ func _ready() -> void:
 		_activate_server_backend(false)
 	else:
 		rebuild_chunks_structure()
+
+	if Engine.is_editor_hint() and get_tree():
+		sync_editor_scene_visibility(get_tree().edited_scene_root)
 
 	# Runs after the backend is up, so the very first pass can already build colliders.
 	_refresh_culling_target_state()

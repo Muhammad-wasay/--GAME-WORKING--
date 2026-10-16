@@ -120,8 +120,10 @@ func attach_to_world(world: World3D) -> void:
 		var rec: ChunkRecord = _records[coord]
 		if rec.instance_rid.is_valid():
 			RenderingServer.instance_set_scenario(rec.instance_rid, _scenario)
+			RenderingServer.instance_set_visible(rec.instance_rid, _cached_visible and rec.has_terrain)
 		if rec.debug_instance_rid.is_valid():
 			RenderingServer.instance_set_scenario(rec.debug_instance_rid, _scenario)
+			RenderingServer.instance_set_visible(rec.debug_instance_rid, _cached_visible)
 		if rec.body_rid.is_valid():
 			PhysicsServer3D.body_set_space(rec.body_rid, _space)
 
@@ -129,6 +131,7 @@ func attach_to_world(world: World3D) -> void:
 		var rid: RID = _preview_instances[coord]
 		if rid.is_valid():
 			RenderingServer.instance_set_scenario(rid, _scenario)
+			RenderingServer.instance_set_visible(rid, _cached_visible)
 
 
 ## Detaches all resources from their world without releasing them, so the manager can be moved
@@ -137,8 +140,10 @@ func detach_from_world() -> void:
 	for coord: Vector2i in _records:
 		var rec: ChunkRecord = _records[coord]
 		if rec.instance_rid.is_valid():
+			RenderingServer.instance_set_visible(rec.instance_rid, false)
 			RenderingServer.instance_set_scenario(rec.instance_rid, RID())
 		if rec.debug_instance_rid.is_valid():
+			RenderingServer.instance_set_visible(rec.debug_instance_rid, false)
 			RenderingServer.instance_set_scenario(rec.debug_instance_rid, RID())
 		if rec.body_rid.is_valid():
 			PhysicsServer3D.body_set_space(rec.body_rid, RID())
@@ -146,6 +151,7 @@ func detach_from_world() -> void:
 	for coord: Vector2i in _preview_instances:
 		var rid: RID = _preview_instances[coord]
 		if rid.is_valid():
+			RenderingServer.instance_set_visible(rid, false)
 			RenderingServer.instance_set_scenario(rid, RID())
 
 	_scenario = RID()

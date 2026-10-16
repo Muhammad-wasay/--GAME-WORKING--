@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://tncq0730mgv5"
+path="res://.godot/imported/boss_03_killed_her.mp3-ab0ea3914b64cf0b1a7a1a94c43158a6.mp3str"
+
+[deps]
+
+source_file="res://import/sound/msg box sounds/boss_03_killed_her.mp3"
+dest_files=["res://.godot/imported/boss_03_killed_her.mp3-ab0ea3914b64cf0b1a7a1a94c43158a6.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

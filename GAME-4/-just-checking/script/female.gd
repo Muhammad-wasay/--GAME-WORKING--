@@ -1,24 +1,30 @@
 extends CharacterBody3D
 
-@onready var camera_mount: Node3D = $camera_mount
+@onready var camera_mount: Node3D = get_node_or_null("camera_mount")
 @onready var visuals: Node3D = $jessica
 @onready var animation_player: AnimationPlayer = $jessica/AnimationPlayer
 @onready var collision_shape_3d: CollisionShape3D = $CollisionShape3D
 @onready var hotbar_ui: Node = get_node_or_null("HotbarUI")
 
 var SPEED = 3.0
-const WALK_SPEED = 1.0
-const RUN_SPEED = 2.0
+const WALK_SPEED = 1.05
+const RUN_SPEED = 1.95
 const JUMP_VELOCITY = 4.5
 const CROUCH_SPEED = 1.0
 const SWIM_SPEED = 1.5
 
 @export var sens_horizontal = 0.3
 @export var sens_vertical = 0.1
+@export var is_npc_companion: bool = true
+@export var is_caged: bool = true
+@export var is_following_roy: bool = false
+
 var running = false
 var is_crouching = false
 var is_swimming = false
 var water_surface_y: float = 0.0  # Pani ki surface height yaad rakhni hai
+var target_roy: CharacterBody3D = null
+var overhead_label: Label3D = null
 
 @export var toon_material: Material
 
@@ -32,16 +38,65 @@ func apply_toon_to_children(node: Node) -> void:
 			apply_toon_to_children(child)
 
 func _ready() -> void:
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	apply_toon_to_children(self)
+	if is_npc_companion:
+		_setup_as_npc_companion()
+	else:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+func _setup_as_npc_companion() -> void:
+	# Disable Jessica's internal camera and hotbar so Roy remains the active player
+	if camera_mount:
+		var cam := camera_mount.find_child("Camera3D", true, false) as Camera3D
+		if cam:
+			cam.current = false
+			cam.queue_free()
+	if hotbar_ui:
+		hotbar_ui.visible = false
+	
+	overhead_label = Label3D.new()
+	overhead_label.name = "JessicaNameLabel"
+	overhead_label.text = "♥ Jessica (Trapped)" if is_caged else "♥ Jessica"
+	overhead_label.font_size = 32
+	overhead_label.pixel_size = 0.0035
+	overhead_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	overhead_label.no_depth_test = true
+	overhead_label.modulate = Color(1.0, 0.78, 0.90, 0.96)
+	overhead_label.outline_size = 10
+	overhead_label.outline_modulate = Color(0, 0, 0, 0.95)
+	overhead_label.position = Vector3(0, 1.35, 0)
+	add_child(overhead_label)
+	
+	if animation_player and animation_player.has_animation("jessica/idle_2"):
+		animation_player.play("jessica/idle_2", 0.2)
+
+func set_rescued() -> void:
+	is_caged = false
+	is_following_roy = true
+	if overhead_label:
+		overhead_label.text = "♥ Jessica (Following)"
+		overhead_label.modulate = Color(0.55, 1.0, 0.72, 0.96)
+
+func _find_roy() -> CharacterBody3D:
+	if is_instance_valid(target_roy):
+		return target_roy
+	var scene := get_tree().current_scene
+	if scene:
+		target_roy = scene.find_child("Roy", true, false) as CharacterBody3D
+	return target_roy
 
 func _input(event: InputEvent) -> void:
+	if is_npc_companion:
+		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		rotate_y(deg_to_rad(-event.relative.x * sens_horizontal))
 		visuals.rotate_y(deg_to_rad(event.relative.x * sens_horizontal))
 		camera_mount.rotate_x(deg_to_rad(event.relative.y * sens_vertical))
 
 func _physics_process(delta: float) -> void:
+	if is_npc_companion:
+		_process_companion_ai(delta)
+		return
 	#if Input.is_action_just_pressed("drop"):
 		#drop_from_inventory()
 	
@@ -167,6 +222,90 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 
+func _process_companion_ai(delta: float) -> void:
+	var roy := _find_roy()
+	if not is_on_floor() and not is_swimming:
+		velocity += get_gravity() * delta
+	
+	if is_caged or not is_following_roy or not is_instance_valid(roy):
+		velocity.x = move_toward(velocity.x, 0.0, WALK_SPEED * 3.0)
+		velocity.z = move_toward(velocity.z, 0.0, WALK_SPEED * 3.0)
+		if is_instance_valid(roy):
+			var look_dir := roy.global_position - global_position
+			look_dir.y = 0.0
+			if look_dir.length_squared() > 0.001 and visuals:
+				var c_scale := visuals.scale
+				var t_basis := Basis.looking_at(look_dir.normalized(), Vector3.UP).rotated(Vector3.UP, PI)
+				var c_quat := visuals.global_transform.basis.get_rotation_quaternion()
+				visuals.global_transform.basis = Basis(c_quat.slerp(t_basis.get_rotation_quaternion(), delta * 8.0))
+				visuals.scale = c_scale
+		if animation_player:
+			var captive_anim := "jessica/crouch_idle" if is_caged else "jessica/idle_2"
+			if animation_player.current_animation != captive_anim:
+				animation_player.play(captive_anim, 0.25)
+		move_and_slide()
+		return
+	
+	var to_roy := roy.global_position - global_position
+	var flat_to_roy := Vector3(to_roy.x, 0.0, to_roy.z)
+	var dist := flat_to_roy.length()
+	
+	if is_swimming:
+		var cur_scale_y = global_basis.get_scale().y
+		var player_height = 1.23 * cur_scale_y
+		var target_y = water_surface_y - (player_height * 0.35)
+		var y_diff = target_y - global_position.y
+		if is_on_floor() and global_position.y > water_surface_y - 0.3:
+			exit_water()
+			return
+		var max_buoyancy = 3.0 * cur_scale_y
+		velocity.y = move_toward(velocity.y, clamp(y_diff * 5.0, -max_buoyancy, max_buoyancy), delta * 10.0 * cur_scale_y)
+		if dist > 1.7:
+			var s_dir := flat_to_roy.normalized()
+			_face_companion_dir(s_dir, delta * 12.0)
+			velocity.x = s_dir.x * SWIM_SPEED
+			velocity.z = s_dir.z * SWIM_SPEED
+			if animation_player.current_animation != "jessica/swimming":
+				animation_player.play("jessica/swimming", 0.2)
+		else:
+			velocity.x = move_toward(velocity.x, 0.0, SWIM_SPEED * 3.0)
+			velocity.z = move_toward(velocity.z, 0.0, SWIM_SPEED * 3.0)
+			if animation_player.current_animation != "jessica/water_idle":
+				animation_player.play("jessica/water_idle", 0.2)
+		move_and_slide()
+		return
+	
+	if dist > 1.75:
+		var move_dir := flat_to_roy.normalized()
+		_face_companion_dir(move_dir, delta * 12.0)
+		var use_run: bool = (dist > 3.6) or (roy.running if "running" in roy else false)
+		var target_spd: float = RUN_SPEED if use_run else WALK_SPEED
+		velocity.x = move_dir.x * target_spd
+		velocity.z = move_dir.z * target_spd
+		if use_run:
+			if animation_player.current_animation != "jessica/slow_run":
+				animation_player.play("jessica/slow_run", 0.2)
+		else:
+			if animation_player.current_animation != "jessica/jessica_walk":
+				animation_player.play("jessica/jessica_walk", 0.2)
+	else:
+		velocity.x = move_toward(velocity.x, 0.0, WALK_SPEED * 4.0)
+		velocity.z = move_toward(velocity.z, 0.0, WALK_SPEED * 4.0)
+		if animation_player.current_animation != "jessica/idle_2":
+			animation_player.play("jessica/idle_2", 0.2)
+	
+	move_and_slide()
+
+func _face_companion_dir(dir: Vector3, weight: float) -> void:
+	if not visuals or dir.length_squared() < 0.0001:
+		return
+	var current_scale := visuals.scale
+	var target_basis := Basis.looking_at(dir, Vector3.UP).rotated(Vector3.UP, PI)
+	var current_quat := visuals.global_transform.basis.get_rotation_quaternion()
+	var target_quat := target_basis.get_rotation_quaternion()
+	visuals.global_transform.basis = Basis(current_quat.slerp(target_quat, clampf(weight, 0.0, 1.0)))
+	visuals.scale = current_scale
+
 func enter_water(surface_y: float = 0.0) -> void:
 	is_swimming = true
 	water_surface_y = surface_y
@@ -178,6 +317,7 @@ func exit_water() -> void:
 	water_surface_y = 0.0
 	visuals.position.y = 0.0
 	print("Player (Jessica) pani se bahar nikal gayi!")
+
 
 ## ===== INVENTORY FUNCTIONS =====
 #func add_to_inventory(item_data: Dictionary) -> bool:

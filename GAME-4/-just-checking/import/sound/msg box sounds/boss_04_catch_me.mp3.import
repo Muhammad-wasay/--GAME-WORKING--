@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://cxqhxik5k7ay4"
+path="res://.godot/imported/boss_04_catch_me.mp3-3074cef510c065ca8f17afec8e58ce43.mp3str"
+
+[deps]
+
+source_file="res://import/sound/msg box sounds/boss_04_catch_me.mp3"
+dest_files=["res://.godot/imported/boss_04_catch_me.mp3-3074cef510c065ca8f17afec8e58ce43.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

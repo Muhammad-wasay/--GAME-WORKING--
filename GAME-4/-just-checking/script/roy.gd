@@ -45,11 +45,26 @@ const BULLET_TRACER_SCENE = preload("res://vfx/bullet_tracer.tscn")
 const PISTOL_IDLE_MAIN_ANIM = preload("res://animations/pistol_idle_main.anim")
 const PLAYER_HIT_REACTION_ANIM = preload("res://animations/player_hit_reaction.anim")
 
+# ===== PLAYER AUDIO STREAMS =====
+var SFX_FOOTSTEP: AudioStream = null
+var SFX_CROUCH_WALK: AudioStream = null
+var SFX_SWIMMING: AudioStream = null
+var SFX_GETTING_HIT: AudioStream = null
+
+var sfx_footstep_player: AudioStreamPlayer = null
+var sfx_crouch_player: AudioStreamPlayer = null
+var sfx_swim_player: AudioStreamPlayer = null
+var sfx_hit_player: AudioStreamPlayer = null
+var footstep_timer: float = 0.0
+var dialogue_locked: bool = false
+var has_cage_key: bool = false
+
 var can_fire := true
 var fire_cooldown := 0.22
 var fire_timer := 0.0
 var is_firing := false
 var recoil_timer := 0.0
+var hit_react_timer := 0.0
 var muzzle_flash_node: Node3D = null
 var crosshair_layer: CanvasLayer = null
 
@@ -115,6 +130,7 @@ func _ready() -> void:
 	
 	_setup_bars()
 	_setup_gun_and_crosshair()
+	_setup_audio()
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
@@ -131,6 +147,24 @@ func _physics_process(delta: float) -> void:
 		recoil_timer -= delta
 		if recoil_timer <= 0.0:
 			is_firing = false
+	if hit_react_timer > 0.0:
+		hit_react_timer -= delta
+	
+	if dialogue_locked:
+		velocity.x = move_toward(velocity.x, 0.0, WALK_SPEED * 4.0)
+		velocity.z = move_toward(velocity.z, 0.0, WALK_SPEED * 4.0)
+		if not is_on_floor():
+			velocity += get_gravity() * delta
+		_stop_movement_sounds()
+		if gun_equipped:
+			if animation_player.current_animation != "NewLib/pistol_idle_main":
+				animation_player.play("NewLib/pistol_idle_main", 0.25)
+		else:
+			if animation_player.current_animation != "NewLib/idle_2":
+				animation_player.play("NewLib/idle_2", 0.2)
+		move_and_slide()
+		return
+	
 	if Input.is_action_just_pressed("drop"):
 		drop_from_inventory()
 	
@@ -168,6 +202,8 @@ func _physics_process(delta: float) -> void:
 			
 			if animation_player.current_animation != "NewLib/swimming":
 				animation_player.play("NewLib/swimming", 0.2)
+			if sfx_swim_player and not sfx_swim_player.playing:
+				sfx_swim_player.play()
 		else:
 			velocity.x = move_toward(velocity.x, 0, SWIM_SPEED * 3.0)
 			velocity.z = move_toward(velocity.z, 0, SWIM_SPEED * 3.0)
@@ -176,7 +212,13 @@ func _physics_process(delta: float) -> void:
 			
 			if animation_player.current_animation != "NewLib/water_idle":
 				animation_player.play("NewLib/water_idle", 0.2)
+			if sfx_swim_player and sfx_swim_player.playing:
+				sfx_swim_player.stop()
 		
+		if sfx_footstep_player and sfx_footstep_player.playing:
+			sfx_footstep_player.stop()
+		if sfx_crouch_player and sfx_crouch_player.playing:
+			sfx_crouch_player.stop()
 		move_and_slide()
 		return
 	
@@ -220,6 +262,7 @@ func _physics_process(delta: float) -> void:
 		animation_player.play("NewLib/jump", 0.1, anim_speed)
 
 	if is_jumping:
+		_stop_movement_sounds()
 		velocity.x = jump_velocity_xz.x
 		velocity.z = jump_velocity_xz.z
 		move_and_slide()
@@ -233,57 +276,64 @@ func _physics_process(delta: float) -> void:
 	var input_dir := Input.get_vector("right", "left", "backward", "forward")
 	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	
+	if is_firing:
+		_face_aim_direction(delta * 25.0)
+	
 	if direction:
-		var current_scale = visuals.scale
-		var target_basis = Basis.looking_at(direction, Vector3.UP).rotated(Vector3.UP, PI)
-		var current_quat = visuals.global_transform.basis.get_rotation_quaternion()
-		var target_quat = target_basis.get_rotation_quaternion()
-		visuals.global_transform.basis = Basis(current_quat.slerp(target_quat, delta * 15.0))
-		visuals.scale = current_scale
+		if not is_firing:
+			var current_scale = visuals.scale
+			var target_basis = Basis.looking_at(direction, Vector3.UP).rotated(Vector3.UP, PI)
+			var current_quat = visuals.global_transform.basis.get_rotation_quaternion()
+			var target_quat = target_basis.get_rotation_quaternion()
+			visuals.global_transform.basis = Basis(current_quat.slerp(target_quat, delta * 15.0))
+			visuals.scale = current_scale
 		
-		if running:
-			if gun_equipped:
-				if not is_firing and animation_player.current_animation != "NewLib/pistol_run":
-					animation_player.play("NewLib/pistol_run", 0.2)
+		if hit_react_timer <= 0.0:
+			if running:
+				if gun_equipped:
+					if not is_firing and animation_player.current_animation != "NewLib/pistol_run":
+						animation_player.play("NewLib/pistol_run", 0.2)
+				else:
+					if animation_player.current_animation != "NewLib/run":
+						animation_player.play("NewLib/run", 0.2)
+			elif is_crouching:
+				if gun_equipped:
+					if not is_firing and animation_player.current_animation != "NewLib/pistol_crouch_idle":
+						animation_player.play("NewLib/pistol_crouch_idle", 0.2)
+				else:
+					if animation_player.current_animation != "NewLib/crouch_walking":
+						animation_player.play("NewLib/crouch_walking", 0.2)
 			else:
-				if animation_player.current_animation != "NewLib/run":
-					animation_player.play("NewLib/run", 0.2)
-		elif is_crouching:
-			if gun_equipped:
-				if not is_firing and animation_player.current_animation != "NewLib/pistol_crouch_idle":
-					animation_player.play("NewLib/pistol_crouch_idle", 0.2)
-			else:
-				if animation_player.current_animation != "NewLib/crouch_walking":
-					animation_player.play("NewLib/crouch_walking", 0.2)
-		else:
-			if gun_equipped:
-				if not is_firing and animation_player.current_animation != "NewLib/pistol_walk":
-					animation_player.play("NewLib/pistol_walk", 0.2)
-			else:
-				if animation_player.current_animation != "NewLib/walking":
-					animation_player.play("NewLib/walking", 0.2)
-#ww					$Node3D/FootstepPlayer.play()
+				if gun_equipped:
+					if not is_firing and animation_player.current_animation != "NewLib/pistol_walk":
+						animation_player.play("NewLib/pistol_walk", 0.2)
+				else:
+					if animation_player.current_animation != "NewLib/walking":
+						animation_player.play("NewLib/walking", 0.2)
 				
 		velocity.x = direction.x * SPEED
 		velocity.z = direction.z * SPEED
+		_update_movement_sounds(delta, true)
 	else:
-		if is_crouching:
-			if gun_equipped:
-				if not is_firing and animation_player.current_animation != "NewLib/pistol_crouch_idle":
-					animation_player.play("NewLib/pistol_crouch_idle", 0.2)
+		if hit_react_timer <= 0.0:
+			if is_crouching:
+				if gun_equipped:
+					if not is_firing and animation_player.current_animation != "NewLib/pistol_crouch_idle":
+						animation_player.play("NewLib/pistol_crouch_idle", 0.2)
+				else:
+					if animation_player.current_animation != "NewLib/crouch_idle":
+						animation_player.play("NewLib/crouch_idle", 0.2)
 			else:
-				if animation_player.current_animation != "NewLib/crouch_idle":
-					animation_player.play("NewLib/crouch_idle", 0.2)
-		else:
-			if gun_equipped:
-				if not is_firing and animation_player.current_animation != "NewLib/pistol_idle_main":
-					animation_player.play("NewLib/pistol_idle_main", 0.25)
-			else:
-				if animation_player.current_animation != "NewLib/idle_2":
-					animation_player.play("NewLib/idle_2", 0.2)
+				if gun_equipped:
+					if not is_firing and animation_player.current_animation != "NewLib/pistol_idle_main":
+						animation_player.play("NewLib/pistol_idle_main", 0.25)
+				else:
+					if animation_player.current_animation != "NewLib/idle_2":
+						animation_player.play("NewLib/idle_2", 0.2)
 
 		velocity.x = move_toward(velocity.x, 0, WALK_SPEED)
 		velocity.z = move_toward(velocity.z, 0, WALK_SPEED)
+		_update_movement_sounds(delta, false)
 
 	move_and_slide()
 
@@ -292,11 +342,14 @@ func enter_water(surface_y: float = 0.0) -> void:
 	is_swimming = true
 	water_surface_y = surface_y
 	visuals.position.y = 0.0
+	_stop_movement_sounds()
 
 func exit_water() -> void:
 	is_swimming = false
 	water_surface_y = 0.0
 	visuals.position.y = 0.0
+	if sfx_swim_player and sfx_swim_player.playing:
+		sfx_swim_player.stop()
 
 # ===== INVENTORY & PICKUP FUNCTIONS =====
 func add_to_inventory(item_data: Dictionary) -> bool:
@@ -346,7 +399,7 @@ func show_gun_instruction() -> void:
 	if instruction_banner and instruction_banner.has_method("show_message"):
 		instruction_banner.show_message("Press TAB to hold the gun!", 5.0)
 
-func _on_hotbar_item_selected(slot_index: int, item_data: Dictionary) -> void:
+func _on_hotbar_item_selected(_slot_index: int, item_data: Dictionary) -> void:
 	var item_id = item_data.get("id", "")
 	var item_type = item_data.get("type", "")
 	
@@ -354,8 +407,17 @@ func _on_hotbar_item_selected(slot_index: int, item_data: Dictionary) -> void:
 		return
 	_unequip_gun()
 
+func _has_gun_in_inventory() -> bool:
+	if hotbar_ui and hotbar_ui.has_method("has_item"):
+		return hotbar_ui.has_item("gun")
+	return false
+
 func _equip_gun() -> void:
 	if gun_equipped:
+		return
+	# Gun sirf tab hold hogi jab player ne gun pick up kar ke inventory mein daali ho
+	if not _has_gun_in_inventory():
+		show_tip_message("Pick up the gun first!")
 		return
 	gun_equipped = true
 	held_gun.visible = true
@@ -372,6 +434,22 @@ func _unequip_gun() -> void:
 	if crosshair_layer:
 		crosshair_layer.visible = false
 	animation_player.play("NewLib/idle_2", 0.2)
+
+func _face_aim_direction(weight: float = 1.0) -> void:
+	if not camera or not visuals:
+		return
+	var cam_forward := -camera.global_transform.basis.z
+	var aim_dir_xz := Vector3(cam_forward.x, 0.0, cam_forward.z).normalized()
+	if aim_dir_xz.length_squared() > 0.0001:
+		var current_scale := visuals.scale
+		var target_basis := Basis.looking_at(aim_dir_xz, Vector3.UP).rotated(Vector3.UP, PI)
+		if weight >= 1.0:
+			visuals.global_transform.basis = target_basis
+		else:
+			var current_quat := visuals.global_transform.basis.get_rotation_quaternion()
+			var target_quat := target_basis.get_rotation_quaternion()
+			visuals.global_transform.basis = Basis(current_quat.slerp(target_quat, clampf(weight, 0.0, 1.0)))
+		visuals.scale = current_scale
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("gun_interact"):
@@ -401,6 +479,9 @@ func fire_gun() -> void:
 	is_firing = true
 	recoil_timer = 0.22
 	
+	# Immediately rotate character towards the direction the player is shooting
+	_face_aim_direction(1.0)
+	
 	# Shoot animation (purani pistol_idle animation ko gun fire ke tor par integrate kiya)
 	animation_player.stop()
 	animation_player.play("NewLib/pistol_idle", 0.03, 2.6)
@@ -413,9 +494,6 @@ func fire_gun() -> void:
 		if aim_dir.length_squared() > 0.01:
 			muzzle_flash_node.look_at(muzzle_pos + aim_dir, Vector3.UP)
 		muzzle_flash_node.flash()
-	
-	# Camera recoil kickback
-	camera_mount.rotation.x = clamp(camera_mount.rotation.x - deg_to_rad(1.2), deg_to_rad(-20.0), deg_to_rad(40.0))
 	
 	# Raycast from camera center
 	var space_state = get_world_3d().direct_space_state
@@ -456,11 +534,9 @@ func fire_gun() -> void:
 	
 	# Bullet tracer beam
 	var tracer = BULLET_TRACER_SCENE.instantiate()
-	var scene_root = get_tree().current_scene
-	if scene_root:
-		scene_root.add_child(tracer)
-	else:
-		get_parent().add_child(tracer)
+	var spawn_parent = get_tree().current_scene if get_tree().current_scene else get_parent()
+	if spawn_parent:
+		spawn_parent.add_child(tracer)
 	tracer.init_tracer(muzzle_pos, hit_pos)
 
 func get_gun_muzzle_global_pos() -> Vector3:
@@ -486,6 +562,13 @@ func _setup_gun_and_crosshair() -> void:
 			lib.add_animation("pistol_idle_main", PISTOL_IDLE_MAIN_ANIM)
 		if not lib.has_animation("player_hit_reaction"):
 			lib.add_animation("player_hit_reaction", PLAYER_HIT_REACTION_ANIM)
+		var hit_anim_res := lib.get_animation("player_hit_reaction")
+		if hit_anim_res:
+			hit_anim_res.loop_mode = Animation.LOOP_NONE
+		
+		# Fix vertical bobbing/shifting when holding gun, walking with gun, or firing gun:
+		# Lock Hips position to Roy's grounded idle_2 Hips height & strip non-Hips position/scale tracks
+		_normalize_pistol_and_combat_animations(lib)
 	
 	# Muzzle flash VFX attachment (top_level so it does not inherit bone scale)
 	if not is_instance_valid(muzzle_flash_node):
@@ -518,6 +601,111 @@ func _setup_gun_and_crosshair() -> void:
 	add_child(crosshair_layer)
 	crosshair_layer.visible = false
 
+func _normalize_pistol_and_combat_animations(lib: AnimationLibrary) -> void:
+	var skel: Skeleton3D = get_node_or_null("visuals/person/Skeleton3D") as Skeleton3D
+	var base_hips_pos := Vector3(-2.8305112e-07, 0.006056122, -6.6381617e-06)
+	if skel and skel.get_bone_count() > 0:
+		base_hips_pos = skel.get_bone_pose_position(0)
+		# Reset all non-Hips bone positions and scales to exact rest pose so no animation stretches the rig
+		for b in range(1, skel.get_bone_count()):
+			skel.set_bone_pose_position(b, skel.get_bone_rest(b).origin)
+			skel.set_bone_pose_scale(b, Vector3.ONE)
+		skel.set_bone_pose_scale(0, Vector3.ONE)
+	
+	if lib.has_animation("idle_2"):
+		var idle_anim: Animation = lib.get_animation("idle_2")
+		if idle_anim:
+			for t in range(idle_anim.get_track_count()):
+				if idle_anim.track_get_type(t) == Animation.TYPE_POSITION_3D and str(idle_anim.track_get_path(t)).ends_with("Hips"):
+					if idle_anim.track_get_key_count(t) > 0:
+						base_hips_pos = idle_anim.track_get_key_value(t, 0)
+					break
+	
+	var target_anims := [
+		"pistol_idle_main",
+		"pistol_idle",
+		"pistol_walk",
+		"pistol_run",
+		"pistol_crouch_idle",
+		"player_hit_reaction",
+		"walking",
+		"run",
+		"idle_2"
+	]
+	
+	for anim_name in target_anims:
+		if not lib.has_animation(anim_name):
+			continue
+		var anim: Animation = lib.get_animation(anim_name)
+		if not anim:
+			continue
+		
+		var is_crouch_anim: bool = (anim_name == "pistol_crouch_idle")
+		var hips_pos_track_found := false
+		
+		for t in range(anim.get_track_count() - 1, -1, -1):
+			var raw_path := str(anim.track_get_path(t))
+			var fixed_path := raw_path.replace("mixamorig2_", "mixamorig_").replace("mixamorig1_", "mixamorig_")
+			if not fixed_path.begins_with("Skeleton3D:"):
+				var colon_idx := fixed_path.find(":")
+				if colon_idx != -1:
+					fixed_path = "Skeleton3D" + fixed_path.substr(colon_idx)
+			if fixed_path != raw_path:
+				anim.track_set_path(t, NodePath(fixed_path))
+			
+			var ttype := anim.track_get_type(t)
+			var is_hips := fixed_path.ends_with("Hips")
+			
+			# Remove all scale tracks and all non-Hips position tracks so bone lengths stay 100% locked to rest pose
+			if ttype == Animation.TYPE_SCALE_3D:
+				anim.remove_track(t)
+				continue
+			if ttype == Animation.TYPE_POSITION_3D and not is_hips:
+				anim.remove_track(t)
+				continue
+			
+			# Lock Hips position track to grounded base_hips_pos (prevents vertical bobbing/jumping)
+			if ttype == Animation.TYPE_POSITION_3D and is_hips:
+				hips_pos_track_found = true
+				var kc := anim.track_get_key_count(t)
+				for k in range(kc):
+					if is_crouch_anim:
+						var v: Vector3 = anim.track_get_key_value(t, k)
+						var crouch_y: float = v.y * (0.005946775 if v.y > 0.05 else 1.0)
+						anim.track_set_key_value(t, k, Vector3(base_hips_pos.x, crouch_y, base_hips_pos.z))
+					else:
+						anim.track_set_key_value(t, k, base_hips_pos)
+		
+		# Ensure a Hips position track exists so blending never interpolates from an unscaled pose
+		if not hips_pos_track_found and not is_crouch_anim:
+			var nt := anim.add_track(Animation.TYPE_POSITION_3D)
+			anim.track_set_path(nt, NodePath("Skeleton3D:mixamorig_Hips"))
+			anim.track_insert_key(nt, 0.0, base_hips_pos)
+	
+	# Stabilize lower body on pistol_idle (used for firing) so shooting never dips/bobs the character's legs or hips
+	if lib.has_animation("pistol_idle") and lib.has_animation("pistol_idle_main"):
+		var shoot_anim: Animation = lib.get_animation("pistol_idle")
+		var hold_anim: Animation = lib.get_animation("pistol_idle_main")
+		if shoot_anim and hold_anim:
+			var lower_bones := [
+				"Skeleton3D:mixamorig_Hips",
+				"Skeleton3D:mixamorig_LeftUpLeg",
+				"Skeleton3D:mixamorig_RightUpLeg",
+				"Skeleton3D:mixamorig_LeftLeg",
+				"Skeleton3D:mixamorig_RightLeg",
+				"Skeleton3D:mixamorig_LeftFoot",
+				"Skeleton3D:mixamorig_RightFoot",
+				"Skeleton3D:mixamorig_LeftToeBase",
+				"Skeleton3D:mixamorig_RightToeBase"
+			]
+			for bpath in lower_bones:
+				var hold_t := hold_anim.find_track(NodePath(bpath), Animation.TYPE_ROTATION_3D)
+				var shoot_t := shoot_anim.find_track(NodePath(bpath), Animation.TYPE_ROTATION_3D)
+				if hold_t != -1 and shoot_t != -1 and hold_anim.track_get_key_count(hold_t) > 0:
+					var steady_rot: Quaternion = hold_anim.track_get_key_value(hold_t, 0)
+					for k in range(shoot_anim.track_get_key_count(shoot_t)):
+						shoot_anim.track_set_key_value(shoot_t, k, steady_rot)
+
 # ===== HEALTH =====
 func heal(amount: float) -> bool:
 	if health >= MAX_HEALTH:
@@ -529,9 +717,37 @@ func heal(amount: float) -> bool:
 func take_damage(amount: float) -> void:
 	health = max(0.0, health - amount)
 	_update_health_bar()
-	# Hit reaction animation
+	_flash_damage_vignette()
+	if sfx_hit_player:
+		sfx_hit_player.pitch_scale = randf_range(0.95, 1.06)
+		sfx_hit_player.play()
+	# Hit reaction animation (protected by hit_react_timer so idle/walk doesn't cancel it)
 	if animation_player.has_animation("NewLib/player_hit_reaction") and health > 0.0:
-		animation_player.play("NewLib/player_hit_reaction", 0.08)
+		hit_react_timer = 0.55
+		animation_player.stop()
+		animation_player.play("NewLib/player_hit_reaction", 0.06, 1.35)
+
+func _flash_damage_vignette() -> void:
+	var dmg_layer := get_node_or_null("DamageFlashLayer") as CanvasLayer
+	var dmg_rect: ColorRect = null
+	if not dmg_layer:
+		dmg_layer = CanvasLayer.new()
+		dmg_layer.name = "DamageFlashLayer"
+		dmg_layer.layer = 15
+		dmg_rect = ColorRect.new()
+		dmg_rect.name = "DamageRect"
+		dmg_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+		dmg_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		dmg_rect.color = Color(0.85, 0.05, 0.05, 0.0)
+		dmg_layer.add_child(dmg_rect)
+		add_child(dmg_layer)
+	else:
+		dmg_rect = dmg_layer.get_node_or_null("DamageRect") as ColorRect
+	
+	if dmg_rect:
+		dmg_rect.color.a = 0.38
+		var t := create_tween()
+		t.tween_property(dmg_rect, "color:a", 0.0, 0.35)
 
 func _update_health_bar() -> void:
 	if health_bar:
@@ -645,6 +861,108 @@ func show_tip_once(tip_id: String, title: String, body: String, image: Texture2D
 	shown_tips[tip_id] = true
 	tip_popup.show_tip(title, body, image)
 
-func show_tip_message(text: String) -> void:
+func show_tip_message(text: String, duration: float = 2.5) -> void:
 	if instruction_banner and instruction_banner.has_method("show_message"):
-		instruction_banner.show_message(text, 2.0)
+		instruction_banner.show_message(text, duration)
+
+# ===== PLAYER AUDIO SYSTEM =====
+func _setup_audio() -> void:
+	if ResourceLoader.exists("res://import/sound/male_character/freesound_community-footstep-1-83098.mp3"):
+		SFX_FOOTSTEP = load("res://import/sound/male_character/freesound_community-footstep-1-83098.mp3")
+	elif ResourceLoader.exists("res://import/sound/male_character/footstep-sound.wav"):
+		SFX_FOOTSTEP = load("res://import/sound/male_character/footstep-sound.wav")
+		
+	if ResourceLoader.exists("res://import/sound/male_character/crouch_walk.mp3"):
+		SFX_CROUCH_WALK = load("res://import/sound/male_character/crouch_walk.mp3")
+		
+	if ResourceLoader.exists("res://import/sound/male_character/swimming.mp3"):
+		SFX_SWIMMING = load("res://import/sound/male_character/swimming.mp3")
+		
+	if ResourceLoader.exists("res://import/sound/male_character/getting-hit.mp3"):
+		SFX_GETTING_HIT = load("res://import/sound/male_character/getting-hit.mp3")
+
+	if SFX_FOOTSTEP:
+		sfx_footstep_player = AudioStreamPlayer.new()
+		sfx_footstep_player.name = "FootstepAudio"
+		sfx_footstep_player.stream = SFX_FOOTSTEP
+		sfx_footstep_player.volume_db = -3.0
+		add_child(sfx_footstep_player)
+	
+	if SFX_CROUCH_WALK:
+		sfx_crouch_player = AudioStreamPlayer.new()
+		sfx_crouch_player.name = "CrouchWalkAudio"
+		var cw_stream := SFX_CROUCH_WALK.duplicate()
+		if cw_stream is AudioStreamMP3:
+			cw_stream.loop = true
+		sfx_crouch_player.stream = cw_stream
+		sfx_crouch_player.volume_db = -4.0
+		add_child(sfx_crouch_player)
+	
+	if SFX_SWIMMING:
+		sfx_swim_player = AudioStreamPlayer.new()
+		sfx_swim_player.name = "SwimmingAudio"
+		var sw_stream := SFX_SWIMMING.duplicate()
+		if sw_stream is AudioStreamMP3:
+			sw_stream.loop = true
+		sfx_swim_player.stream = sw_stream
+		sfx_swim_player.volume_db = -2.0
+		add_child(sfx_swim_player)
+	
+	if SFX_GETTING_HIT:
+		sfx_hit_player = AudioStreamPlayer.new()
+		sfx_hit_player.name = "HitAudio"
+		sfx_hit_player.stream = SFX_GETTING_HIT
+		sfx_hit_player.volume_db = 0.0
+		add_child(sfx_hit_player)
+
+func _update_movement_sounds(_delta: float, is_moving: bool) -> void:
+	if sfx_swim_player and sfx_swim_player.playing:
+		sfx_swim_player.stop()
+	
+	if not is_moving or not is_on_floor():
+		if sfx_footstep_player and sfx_footstep_player.playing:
+			sfx_footstep_player.stop()
+		if sfx_crouch_player and sfx_crouch_player.playing:
+			sfx_crouch_player.stop()
+		footstep_timer = 0.0
+		return
+	
+	if is_crouching:
+		if sfx_footstep_player and sfx_footstep_player.playing:
+			sfx_footstep_player.stop()
+		if sfx_crouch_player and not sfx_crouch_player.playing:
+			sfx_crouch_player.play()
+		return
+	else:
+		if sfx_crouch_player and sfx_crouch_player.playing:
+			sfx_crouch_player.stop()
+	
+	# Normal Walk vs Run footsteps
+	if sfx_footstep_player:
+		var target_pitch := 1.32 if running else 1.0
+		sfx_footstep_player.pitch_scale = target_pitch
+		if not sfx_footstep_player.playing:
+			sfx_footstep_player.play()
+
+func _stop_movement_sounds() -> void:
+	if sfx_footstep_player and sfx_footstep_player.playing:
+		sfx_footstep_player.stop()
+	if sfx_crouch_player and sfx_crouch_player.playing:
+		sfx_crouch_player.stop()
+	if sfx_swim_player and sfx_swim_player.playing:
+		sfx_swim_player.stop()
+
+func has_key() -> bool:
+	if has_cage_key:
+		return true
+	if hotbar_ui and hotbar_ui.has_method("has_item"):
+		return hotbar_ui.has_item("key")
+	return false
+
+func face_world_position(target_pos: Vector3) -> void:
+	var dir := target_pos - global_position
+	dir.y = 0.0
+	if dir.length_squared() > 0.001 and visuals:
+		var cur_scale := visuals.scale
+		visuals.global_transform.basis = Basis.looking_at(dir.normalized(), Vector3.UP).rotated(Vector3.UP, PI)
+		visuals.scale = cur_scale

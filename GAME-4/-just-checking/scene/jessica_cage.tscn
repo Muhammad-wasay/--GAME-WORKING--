@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://dx2aa8sjjlrmi"]
+
+[ext_resource type="Script" path="res://script/jessica_cage.gd" id="1_cagescript"]
+[ext_resource type="PackedScene" uid="uid://bqjnnkp0misw4" path="res://import/models/cage and key/dungeon_cage.glb" id="2_cagemodel"]
+[ext_resource type="PackedScene" uid="uid://q044mppwdf3u" path="res://scene/female.tscn" id="3_jessica"]
+[ext_resource type="PackedScene" uid="uid://dhmp0np80xtl3" path="res://scene/item_interaction.tscn" id="4_interact"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_cagedetect"]
+radius = 2.1
+
+[node name="JessicaCage" type="Node3D"]
+script = ExtResource("1_cagescript")
+
+[node name="CageModel" parent="." instance=ExtResource("2_cagemodel")]
+transform = Transform3D(0.28, 0, 0, 0, 0.25, 0, 0, 0, 0.28, 0, -0.05, 0)
+
+[node name="Jessica" parent="." instance=ExtResource("3_jessica")]
+transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, 0, 0.05, 0)
+is_npc_companion = true
+is_caged = true
+is_following_roy = false
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
+light_color = Color(1, 0.65, 0.28, 1)
+light_energy = 1.8
+omni_range = 4.2
+
+[node name="Area3D" type="Area3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("SphereShape3D_cagedetect")
+
+[node name="item_interaction" parent="." instance=ExtResource("4_interact")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.45, 0)
