@@ -22,14 +22,21 @@ func _on_body_entered(body: Node3D) -> void:
 	if body is CharacterBody3D and not is_picked_up:
 		player_in_range = true
 		player_node = body
+		if "nearby_apple" in body:
+			body.nearby_apple = self
 		print("Press E to pick up the item!")
 		# Jab player paas aaye toh text dikha do
 		if interaction_label:
 			interaction_label.visible = true
+		# Pehli dafa apple ke paas aane par tutorial tip
+		if body.has_method("show_tip_once"):
+			body.show_tip_once("apple", "APPLE", "Press E to keep it in your bag.\nPress ENTER to eat it.")
 
 func _on_body_exited(body: Node3D) -> void:
 	if body == player_node and not is_picked_up:
 		player_in_range = false
+		if "nearby_apple" in body and body.nearby_apple == self:
+			body.nearby_apple = null
 		player_node = null
 		# Jab player door jaye toh text chupa do
 		if interaction_label:
@@ -43,6 +50,16 @@ func _process(_delta: float) -> void:
 		if Input.is_action_just_pressed("drop"):
 			drop_item()
 
+func _unhandled_input(event: InputEvent) -> void:
+	# ENTER dabane par zameen se hi apple kha lo (inventory mein rakhe baghair)
+	if player_in_range and not is_picked_up and event is InputEventKey \
+			and event.pressed and not event.echo \
+			and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
+		if player_node and player_node.has_method("eat_apple"):
+			if player_node.eat_apple():
+				get_viewport().set_input_as_handled()
+				queue_free()
+
 func pick_up() -> void:
 	if is_picked_up:
 		return
@@ -54,7 +71,8 @@ func pick_up() -> void:
 			"name": "Apple",
 			"icon": preload("res://import/UI/apple_icon.png"),
 			"scene": load("res://scene/apple.tscn"),
-			"count": 1
+			"count": 1,
+			"scale": scale
 		}
 		var added = player_node.add_to_inventory(item_data)
 		if added:

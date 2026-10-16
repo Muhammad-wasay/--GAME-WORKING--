@@ -85,6 +85,13 @@ func drop_selected_item(amount: int = 1) -> Dictionary:
 		return dropped
 	return {}
 
+func consume_selected_item(amount: int = 1) -> Dictionary:
+	if selected_index >= 0 and selected_index < slots.size():
+		var used = slots[selected_index].remove_count(amount)
+		item_selected.emit(selected_index, get_selected_item())
+		return used
+	return {}
+
 func has_item(item_id: String) -> bool:
 	for slot in slots:
 		if slot.get_item_id() == item_id:

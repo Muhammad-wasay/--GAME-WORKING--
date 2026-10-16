@@ -1,0 +1,121 @@
+[gd_scene format=3 uid="uid://1rla0b51l61x"]
+
+[ext_resource type="Script" uid="uid://b3otmshf26dl6" path="res://script/start_screen.gd" id="1_uharj"]
+[ext_resource type="VideoStream" uid="uid://71ekbnghuvqj" path="res://import/sound/poster.ogv" id="1_x64hx"]
+[ext_resource type="Texture2D" uid="uid://b0dgknlq31p3j" path="res://import/UI/Buttons/Button_Blue_3Slides_Pressed.png" id="2_yjh10"]
+[ext_resource type="Texture2D" uid="uid://bsutw7nycl728" path="res://import/UI/Buttons/Button_Hover_3Slides.png" id="3_uharj"]
+[ext_resource type="Texture2D" uid="uid://bsvcdq68rgqjd" path="res://import/UI/Buttons/Button_Disable_3Slides.png" id="4_j880g"]
+[ext_resource type="FontFile" uid="uid://xhfgdo8plti8" path="res://import/font-text/ballad_of_dwight_frye/Ballad of Dwight Frye.ttf" id="5_owxrc"]
+[ext_resource type="AudioStream" uid="uid://bb005rskdbeqy" path="res://import/sound/gametheme.wav" id="7_j880g"]
+[ext_resource type="AudioStream" uid="uid://c7ybasgxu2evq" path="res://import/sound/button click sound/freesoundeffects-button-click-289742.mp3" id="8_j880g"]
+[ext_resource type="Script" uid="uid://da43tnc1g1nqy" path="res://script/fade_in_fade_out_component.gd" id="9_owxrc"]
+
+[node name="StartScreen" type="Control" unique_id=1678823619]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_vertical = 4
+script = ExtResource("1_uharj")
+
+[node name="VideoStreamPlayer" type="VideoStreamPlayer" parent="." unique_id=268448283]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+stream = ExtResource("1_x64hx")
+autoplay = true
+expand = true
+loop = true
+
+[node name="BoxContainer" type="BoxContainer" parent="." unique_id=1593028833]
+layout_mode = 1
+offset_top = 182.0
+offset_right = 423.0
+offset_bottom = 415.0
+alignment = 1
+vertical = true
+
+[node name="StartButton" type="TextureButton" parent="BoxContainer" unique_id=245951547]
+custom_minimum_size = Vector2(150, 100)
+layout_mode = 2
+texture_normal = ExtResource("2_yjh10")
+texture_pressed = ExtResource("2_yjh10")
+texture_hover = ExtResource("3_uharj")
+texture_disabled = ExtResource("4_j880g")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="BoxContainer/StartButton" unique_id=2081590250]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -133.0
+offset_top = -28.0
+offset_right = 133.0
+offset_bottom = 28.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_fonts/font = ExtResource("5_owxrc")
+theme_override_font_sizes/font_size = 20
+text = "START"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="QuitButton" type="TextureButton" parent="BoxContainer" unique_id=24519997]
+custom_minimum_size = Vector2(150, 100)
+layout_mode = 2
+texture_normal = ExtResource("2_yjh10")
+texture_pressed = ExtResource("2_yjh10")
+texture_hover = ExtResource("3_uharj")
+texture_disabled = ExtResource("4_j880g")
+ignore_texture_size = true
+stretch_mode = 5
+
+[node name="Label" type="Label" parent="BoxContainer/QuitButton" unique_id=604430343]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -133.0
+offset_top = -28.0
+offset_right = 133.0
+offset_bottom = 28.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_fonts/font = ExtResource("5_owxrc")
+theme_override_font_sizes/font_size = 20
+text = "QUIT"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Fade" type="ColorRect" parent="." unique_id=2121785338]
+modulate = Color(1, 1, 1, 0)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="StartSound" type="AudioStreamPlayer2D" parent="." unique_id=1675564698]
+stream = ExtResource("7_j880g")
+autoplay = true
+
+[node name="buttonsound" type="AudioStreamPlayer2D" parent="." unique_id=216304374]
+stream = ExtResource("8_j880g")
+
+[node name="FadeIn_Fade_out_component" type="Node" parent="." unique_id=719898632 node_paths=PackedStringArray("black_image")]
+script = ExtResource("9_owxrc")
+black_image = NodePath("../Fade")

@@ -1,0 +1,43 @@
+[gd_scene format=3 uid="uid://d2yfvvf6s3wps"]
+
+[ext_resource type="Script" uid="uid://2woglyfpfw0y" path="res://script/instruction_banner.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://55iacu87nv8j" path="res://import/UI/Banners/Carved_3Slides.png" id="2_8ieib"]
+[ext_resource type="FontFile" uid="uid://xhfgdo8plti8" path="res://import/font-text/ballad_of_dwight_frye/Ballad of Dwight Frye.ttf" id="3_font"]
+
+[node name="InstructionBanner" type="CanvasLayer" unique_id=430647358]
+layer = 10
+offset = Vector2(0, 1)
+transform = Transform2D(1, 0, 0, 1, 0, 1)
+script = ExtResource("1_script")
+
+[node name="BannerContainer" type="CenterContainer" parent="." unique_id=100688786]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -300.0
+offset_top = 80.0
+offset_right = 300.0
+offset_bottom = 200.0
+grow_horizontal = 2
+
+[node name="BannerPanel" type="PanelContainer" parent="BannerContainer" unique_id=1104117356]
+custom_minimum_size = Vector2(600, 120)
+layout_mode = 2
+
+[node name="BannerTexture" type="TextureRect" parent="BannerContainer/BannerPanel" unique_id=418854091]
+texture_filter = 1
+layout_mode = 2
+texture = ExtResource("2_8ieib")
+expand_mode = 2
+
+[node name="BannerLabel" type="Label" parent="BannerContainer/BannerPanel" unique_id=1147274221]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.95, 0.7, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.8)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_fonts/font = ExtResource("3_font")
+theme_override_font_sizes/font_size = 27
+text = "Press 1 to hold the gun!"
+horizontal_alignment = 1
+vertical_alignment = 1

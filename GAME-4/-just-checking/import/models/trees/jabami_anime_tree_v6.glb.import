@@ -1,15 +1,15 @@
 [remap]
 
-importer="scene"
+importer="ArrayMesh"
 importer_version=1
-type="PackedScene"
+type="ArrayMesh"
 uid="uid://d05u2mumpryfo"
-path="res://.godot/imported/jabami_anime_tree_v6.glb-d8ac890e796b80c4c3a6b7f39bc9dae3.scn"
+path="res://.godot/imported/jabami_anime_tree_v6.glb-d8ac890e796b80c4c3a6b7f39bc9dae3.res"
 
 [deps]
 
 source_file="res://import/models/trees/jabami_anime_tree_v6.glb"
-dest_files=["res://.godot/imported/jabami_anime_tree_v6.glb-d8ac890e796b80c4c3a6b7f39bc9dae3.scn"]
+dest_files=["res://.godot/imported/jabami_anime_tree_v6.glb-d8ac890e796b80c4c3a6b7f39bc9dae3.res"]
 
 [params]
 

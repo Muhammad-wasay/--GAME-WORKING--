@@ -1,0 +1,38 @@
+[gd_scene format=3 uid="uid://dum75afh1qd3w"]
+
+[ext_resource type="Script" uid="uid://clqw68tql3x4t" path="res://script/gun_pickup.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://4vsqh2gmeln1" path="res://import/models/gun/9mm_pistol.glb" id="2_gunmodel"]
+[ext_resource type="PackedScene" uid="uid://dhmp0np80xtl3" path="res://scene/item_interaction.tscn" id="3_interact"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_1"]
+bounce = 0.1
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_gun"]
+size = Vector3(0.46316224, 0.15, 0.318689)
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_detect"]
+radius = 0.87520313
+
+[node name="Gun" type="RigidBody3D" unique_id=1037323027]
+physics_material_override = SubResource("PhysicsMaterial_1")
+script = ExtResource("1_script")
+
+[node name="GunModel" parent="." unique_id=1302369429 instance=ExtResource("2_gunmodel")]
+transform = Transform3D(1.2, 0, 0, 0, 1.2, 0, 0, 0, 1.2, 0, 0, 0)
+
+[node name="Cube_005_9m2_0" parent="GunModel/Sketchfab_model/9mmPistol_fbx/RootNode/Cube_005/Cube_0052" parent_id_path=PackedInt32Array(1302369429, 1804497401) index="0" unique_id=98559627]
+transform = Transform3D(0.9998798, -0.015507685, -2.064973e-09, 0.015507685, 0.9998798, -1.6015633e-11, 2.064973e-09, -1.6015633e-11, 1, 0, 0, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=643141602]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.061210632, 0, -0.0035705566)
+shape = SubResource("BoxShape3D_gun")
+
+[node name="Area3D" type="Area3D" parent="." unique_id=677446828]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Area3D" unique_id=1069667498]
+shape = SubResource("SphereShape3D_detect")
+
+[node name="item_interaction" parent="." unique_id=1699505533 instance=ExtResource("3_interact")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[editable path="GunModel"]

@@ -1,15 +1,15 @@
 [remap]
 
-importer="scene"
+importer="ArrayMesh"
 importer_version=1
-type="PackedScene"
+type="ArrayMesh"
 uid="uid://bp036tbyrmmxa"
-path="res://.godot/imported/simca_1000_1966.glb-946298b7d702b9a38c24b7e67153e58f.scn"
+path="res://.godot/imported/simca_1000_1966.glb-946298b7d702b9a38c24b7e67153e58f.res"
 
 [deps]
 
 source_file="res://import/models/cave/simca_1000_1966.glb"
-dest_files=["res://.godot/imported/simca_1000_1966.glb-946298b7d702b9a38c24b7e67153e58f.scn"]
+dest_files=["res://.godot/imported/simca_1000_1966.glb-946298b7d702b9a38c24b7e67153e58f.res"]
 
 [params]
 

@@ -73,7 +73,7 @@ script = ExtResource("1_6jrnk")
 
 [node name="Apple" parent="." unique_id=1493037699 instance=ExtResource("2_mw2ef")]
 
-[node name="Apple" parent="Apple" index="0" unique_id=1786861637]
+[node name="Apple" parent="Apple" index="0" unique_id=909194773]
 mesh = SubResource("ArrayMesh_diket")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=234297080]
@@ -96,5 +96,6 @@ font_size = 46
 
 [node name="item_interaction" parent="." unique_id=1774469216 instance=ExtResource("5_h1wfa")]
 transform = Transform3D(3, 0, 0, 0, 3, 0, 0, 0, 3, 0.013662338, 2.6436527, 0)
+visible = false
 
 [editable path="Apple"]

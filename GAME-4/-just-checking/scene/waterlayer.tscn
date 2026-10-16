@@ -149,6 +149,7 @@ script = ExtResource("1_0u2of")
 
 [node name="water" type="MeshInstance3D" parent="." unique_id=2097049435]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.77630615, -0.6274297, 0.17541504)
+layers = 3
 mesh = SubResource("BoxMesh_c1s36")
 
 [node name="watervolume" type="Area3D" parent="." unique_id=683319908]

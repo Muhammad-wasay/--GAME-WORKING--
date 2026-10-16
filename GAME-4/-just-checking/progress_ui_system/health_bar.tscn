@@ -1,0 +1,35 @@
+[gd_scene format=3 uid="uid://cle813s5g13oe"]
+
+[ext_resource type="FontFile" uid="uid://xhfgdo8plti8" path="res://import/font-text/ballad_of_dwight_frye/Ballad of Dwight Frye.ttf" id="1_4ctj1"]
+[ext_resource type="Texture2D" uid="uid://55iacu87nv8j" path="res://import/UI/Banners/Carved_3Slides.png" id="2_587ns"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_fjnuo"]
+texture = ExtResource("2_587ns")
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_sfue7"]
+bg_color = Color(0, 0.53447473, 0, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[node name="HealthBar" type="CanvasLayer" unique_id=1967133638]
+
+[node name="Health" type="ProgressBar" parent="." unique_id=1115627786]
+custom_minimum_size = Vector2(300, 2)
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 320.0
+offset_bottom = 47.0
+theme_override_colors/font_color = Color(0, 0, 0, 1)
+theme_override_fonts/font = ExtResource("1_4ctj1")
+theme_override_font_sizes/font_size = 12
+theme_override_styles/background = SubResource("StyleBoxTexture_fjnuo")
+theme_override_styles/fill = SubResource("StyleBoxFlat_sfue7")
+value = 100.0
+rounded = true
