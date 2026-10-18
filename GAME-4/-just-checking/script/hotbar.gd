@@ -97,3 +97,11 @@ func has_item(item_id: String) -> bool:
 		if slot.get_item_id() == item_id:
 			return true
 	return false
+
+func remove_item_by_id(item_id: String, amount: int = 1) -> bool:
+	for slot in slots:
+		if slot.get_item_id() == item_id:
+			slot.remove_count(amount)
+			item_selected.emit(selected_index, get_selected_item())
+			return true
+	return false

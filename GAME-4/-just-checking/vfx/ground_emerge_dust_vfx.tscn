@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://ground_emerge_dust_vfx_scene"]
+
+[ext_resource type="Script" path="res://vfx/ground_emerge_dust_vfx.gd" id="1_script"]
+
+[node name="GroundEmergeDustVFX" type="Node3D"]
+script = ExtResource("1_script")

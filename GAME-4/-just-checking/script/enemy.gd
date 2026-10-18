@@ -19,10 +19,10 @@ enum State {
 @export var walk_speed: float = 0.65
 @export var run_speed: float = 1.15
 @export var attack_damage: float = 12.0
-@export var attack_range: float = 0.95
+@export var attack_range: float = 0.36
 @export var attack_cooldown: float = 1.45
-@export var detection_range: float = 8.5
-@export var lose_interest_range: float = 18.0
+@export var detection_range: float = 3.8
+@export var lose_interest_range: float = 9.5
 @export var patrol_radius: float = 3.0
 
 @export_group("Animation Names")
@@ -44,10 +44,13 @@ enum State {
 
 const ENEMY_HIT_VFX_SCENE = preload("res://vfx/enemy_hit_vfx.tscn")
 const ENEMY_DEATH_VFX_SCENE = preload("res://vfx/enemy_death_vfx.tscn")
+const GROUND_EMERGE_DUST_VFX = preload("res://vfx/ground_emerge_dust_vfx.tscn")
 const APPLE_SCENE = preload("res://scene/apple.tscn")
 const KEY_PICKUP_SCENE = preload("res://scene/key_pickup.tscn")
+const AMMO_PICKUP_SCENE = preload("res://scene/ammo_pickup.tscn")
 var SFX_ENEMY_HIT: AudioStream = null
 var SFX_ENEMY_DEATH: AudioStream = null
+@export var persistent_chase: bool = false
 
 var current_health: float = 100.0
 var state: State = State.IDLE
@@ -95,6 +98,9 @@ var bar_full_width: float = 0.95
 func _ready() -> void:
 	add_to_group("enemies")
 	current_health = max_health
+	attack_range = 0.48 if is_boss else 0.36
+	if not persistent_chase and detection_range > 3.8 and detection_range < 100.0:
+		detection_range = 3.8
 	spawn_origin = global_position
 	patrol_target = spawn_origin
 	state_timer = randf_range(1.2, 3.0)
@@ -269,15 +275,50 @@ func _update_overhead_ui() -> void:
 		else:
 			hp_fill_mat.albedo_color = Color(1.0, 0.1, 0.1)
 
+var cached_companion: CharacterBody3D = null
+
 func _find_player() -> CharacterBody3D:
-	if is_instance_valid(player):
-		return player
 	var scene := get_tree().current_scene
-	if scene:
-		var roy := scene.find_child("Roy", true, false) as CharacterBody3D
-		if roy:
-			player = roy
+	if not scene:
+		return null
+	
+	if not is_instance_valid(player):
+		player = scene.find_child("Roy", true, false) as CharacterBody3D
+	
+	if not is_instance_valid(cached_companion):
+		cached_companion = scene.find_child("female", true, false) as CharacterBody3D
+		if not cached_companion:
+			cached_companion = scene.find_child("Female", true, false) as CharacterBody3D
+		if not cached_companion:
+			cached_companion = scene.find_child("Jessica", true, false) as CharacterBody3D
+		if not cached_companion and is_inside_tree():
+			var allies := get_tree().get_nodes_in_group("companion")
+			if allies.size() > 0:
+				cached_companion = allies[0] as CharacterBody3D
+	
+	var valid_roy: bool = is_instance_valid(player) and (not ("is_dead" in player and player.is_dead))
+	
+	var jessica_active: bool = false
+	if is_instance_valid(cached_companion):
+		var is_following: bool = ("is_following_roy" in cached_companion and cached_companion.is_following_roy)
+		var not_caged: bool = ("is_caged" in cached_companion and not cached_companion.is_caged)
+		var not_dead: bool = ("is_dead" in cached_companion and not cached_companion.is_dead)
+		if is_following and not_caged and not_dead:
+			jessica_active = true
+	
+	if valid_roy and jessica_active:
+		var dist_roy := global_position.distance_to(player.global_position)
+		var dist_jessica := global_position.distance_to(cached_companion.global_position)
+		# Chasing enemies aggressively target Jessica when she trails Roy or is within threat distance!
+		if dist_jessica <= dist_roy + 3.2:
+			return cached_companion
+		else:
 			return player
+	elif valid_roy:
+		return player
+	elif jessica_active:
+		return cached_companion
+	
 	return null
 
 func _physics_process(delta: float) -> void:
@@ -379,7 +420,7 @@ func _physics_process(delta: float) -> void:
 			velocity.z = move_toward(velocity.z, 0.0, delta * 5.0)
 			_play_anim(idle_anim, false)
 			
-			if dist_to_player <= detection_range:
+			if _can_detect_player(target_player, dist_to_player):
 				alert_group()
 				return
 			
@@ -391,7 +432,7 @@ func _physics_process(delta: float) -> void:
 				_play_anim(walk_anim, true)
 		
 		State.PATROL:
-			if dist_to_player <= detection_range:
+			if _can_detect_player(target_player, dist_to_player):
 				alert_group()
 				return
 			
@@ -411,13 +452,21 @@ func _physics_process(delta: float) -> void:
 				_play_anim(walk_anim, false)
 		
 		State.CHASE:
-			if not is_instance_valid(target_player) or dist_to_player > lose_interest_range:
+			if not is_instance_valid(target_player):
+				state = State.IDLE
+				state_timer = 2.0
+				_play_anim(idle_anim, true)
+				return
+				
+			if not persistent_chase and dist_to_player > lose_interest_range:
 				state = State.IDLE
 				state_timer = 2.0
 				_play_anim(idle_anim, true)
 				return
 			
-			if dist_to_player <= attack_range:
+			var flat_dist := Vector2(global_position.x - target_player.global_position.x, global_position.z - target_player.global_position.z).length()
+			var y_diff := absf(global_position.y - target_player.global_position.y)
+			if flat_dist <= attack_range * 1.35 and y_diff <= 0.90:
 				state = State.ATTACK
 				velocity.x = 0.0
 				velocity.z = 0.0
@@ -428,48 +477,68 @@ func _physics_process(delta: float) -> void:
 			if to_player.length_squared() > 0.001:
 				var raw_dir := to_player.normalized()
 				_update_stuck_detector(delta, run_speed, raw_dir)
-				var steer_dir := _calculate_nav_steering(raw_dir, 1.9)
+				var steer_dir := _calculate_nav_steering(raw_dir, 1.15)
+				# Soft separation so multiple minions don't stack on top of each other
+				var sep_vec := Vector3.ZERO
+				for e in get_tree().get_nodes_in_group("enemies"):
+					if e is Node3D and is_instance_valid(e) and e != self:
+						var away: Vector3 = global_position - e.global_position
+						away.y = 0.0
+						var d := away.length()
+						if d > 0.001 and d < 0.42:
+							sep_vec += away.normalized() * ((0.42 - d) / 0.42)
+				if sep_vec.length_squared() > 0.001:
+					steer_dir = (steer_dir + sep_vec * 0.45).normalized()
 				_face_direction(steer_dir, delta * 10.0)
-				velocity.x = steer_dir.x * run_speed
-				velocity.z = steer_dir.z * run_speed
+				velocity.x = move_toward(velocity.x, steer_dir.x * run_speed, delta * 9.0)
+				velocity.z = move_toward(velocity.z, steer_dir.z * run_speed, delta * 9.0)
 			_play_anim(run_anim, false)
 		
 		State.ATTACK:
 			velocity.x = move_toward(velocity.x, 0.0, delta * 8.0)
 			velocity.z = move_toward(velocity.z, 0.0, delta * 8.0)
 			
-			if not is_instance_valid(target_player):
+			if not is_instance_valid(target_player) or ("is_dead" in target_player and target_player.is_dead):
 				is_attacking = false
 				state = State.IDLE
+				_play_anim(idle_anim, true)
 				return
 			
 			var to_player := target_player.global_position - global_position
+			var flat_dist := Vector2(to_player.x, to_player.z).length()
+			var y_diff := absf(to_player.y)
 			to_player.y = 0.0
 			if to_player.length_squared() > 0.001:
 				_face_direction(to_player.normalized(), delta * 12.0)
 			
 			if is_attacking:
 				attack_anim_timer -= delta
-				# Deal damage mid-swing (when 55% of the attack animation has elapsed)
+				# Deal damage mid-swing ONLY if enemy is still in physical contact range with player!
 				if not damage_dealt_in_attack and attack_anim_timer <= 0.45:
 					damage_dealt_in_attack = true
-					if is_instance_valid(target_player) and global_position.distance_to(target_player.global_position) <= attack_range * 1.45:
+					var touching_player := false
+					for i in range(get_slide_collision_count()):
+						var col := get_slide_collision(i)
+						if col and col.get_collider() == target_player:
+							touching_player = true
+							break
+					if is_instance_valid(target_player) and ((flat_dist <= attack_range * 1.55 and y_diff <= 0.95) or touching_player):
 						if target_player.has_method("take_damage"):
 							target_player.take_damage(attack_damage)
-						var target_scale: float = target_player.global_basis.get_scale().y if "global_basis" in target_player else 0.3
+						var target_scale: float = target_player.global_transform.basis.get_scale().y
 						var hit_center := target_player.global_position + Vector3(0.0, 0.95 * target_scale, 0.0)
 						_spawn_hit_vfx(hit_center, (target_player.global_position - global_position).normalized())
 				
 				if attack_anim_timer <= 0.0:
 					is_attacking = false
-					if dist_to_player > attack_range * 1.2:
+					if flat_dist > attack_range * 1.25:
 						state = State.CHASE
 						_play_anim(run_anim, true)
 					else:
 						_play_anim(idle_anim, true)
 				return
 			
-			if dist_to_player > attack_range * 1.25:
+			if flat_dist > attack_range * 1.40 or y_diff > 0.95:
 				state = State.CHASE
 				_play_anim(run_anim, true)
 				return
@@ -529,6 +598,35 @@ func _get_anim_length(anim_short_name: String) -> float:
 				return a.length
 	return 1.1
 
+func _can_detect_player(target_player: CharacterBody3D, dist: float) -> bool:
+	if not is_instance_valid(target_player):
+		return false
+	if "is_dead" in target_player and target_player.is_dead:
+		return false
+	if dist > detection_range:
+		return false
+	if persistent_chase:
+		return true
+	
+	# Check if player is crouching (stealth mode)
+	var is_crouching: bool = ("crouching" in target_player and target_player.crouching)
+	if not is_crouching:
+		# Standing/walking/running makes footstep noise -> enemy hears player within detection_range
+		return true
+	
+	# Player is crouching -> silent! Enemy CANNOT hear player from behind.
+	# Enemy only detects crouching player if player is in front of the enemy's eyes (front vision cone)
+	var enemy_forward: Vector3 = visuals.global_transform.basis.z if visuals else global_transform.basis.z
+	enemy_forward.y = 0.0
+	var to_player: Vector3 = target_player.global_position - global_position
+	to_player.y = 0.0
+	if enemy_forward.length_squared() > 0.0001 and to_player.length_squared() > 0.0001:
+		var dot_front: float = enemy_forward.normalized().dot(to_player.normalized())
+		# dot_front >= 0.25 means player is within the front ~75 degree vision cone
+		if dot_front >= 0.25:
+			return true
+	return false
+
 func alert_group() -> void:
 	if state == State.DEAD or story_frozen or is_retreating:
 		return
@@ -538,7 +636,7 @@ func alert_group() -> void:
 	
 	for node in get_tree().get_nodes_in_group("enemies"):
 		if node is ForestEnemy and node != self and node.state != State.DEAD and not node.story_frozen and not node.is_retreating:
-			if node.global_position.distance_to(global_position) <= 16.0:
+			if node.global_position.distance_to(global_position) <= 5.0:
 				if node.state == State.IDLE or node.state == State.PATROL:
 					node.state = State.CHASE
 					node._play_anim(node.run_anim, true)
@@ -559,10 +657,6 @@ func take_damage(amount: float, hit_position: Vector3 = Vector3.ZERO, hit_normal
 	
 	current_health = maxf(0.0, current_health - amount)
 	_update_overhead_ui()
-	
-	if hit_audio_3d:
-		hit_audio_3d.pitch_scale = randf_range(0.92, 1.08)
-		hit_audio_3d.play()
 	
 	# 1. Spawn Toon Puff Hit VFX at bullet impact point
 	var vfx_pos := hit_position if hit_position != Vector3.ZERO else (global_position + Vector3(0, 0.5, 0))
@@ -655,6 +749,8 @@ func _die(_hit_normal: Vector3) -> void:
 		get_tree().current_scene.add_child(key_drop)
 		key_drop.global_position = global_position + Vector3(0, 0.05, 0)
 	
+	_drop_loot()
+	
 	enemy_died.emit(self)
 	
 	var death_tween := create_tween()
@@ -666,16 +762,39 @@ func _die(_hit_normal: Vector3) -> void:
 	death_tween.tween_callback(func():
 		# Final Toon Cloud Poof right as the body vanishes!
 		_spawn_death_vfx(global_position + Vector3(0, 0.15, 0))
-		if is_boss and APPLE_SCENE and get_tree().current_scene:
-			var reward := APPLE_SCENE.instantiate() as Node3D
-			get_tree().current_scene.add_child(reward)
-			reward.scale = Vector3(0.05, 0.05, 0.05)
-			reward.global_position = global_position + Vector3(0.5, 0.45, 0)
-		
 		var sink := create_tween()
 		sink.tween_property(self, "scale", Vector3(0.01, 0.01, 0.01), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
 		sink.tween_callback(queue_free)
 	)
+
+func _drop_loot() -> void:
+	var scene_root := get_tree().current_scene
+	if not scene_root:
+		return
+	
+	if is_boss:
+		# Boss drops 1 Apple and 1 Ammo box guaranteed!
+		if APPLE_SCENE:
+			var reward := APPLE_SCENE.instantiate() as Node3D
+			scene_root.add_child(reward)
+			reward.scale = Vector3(0.06, 0.06, 0.06)
+			reward.global_position = global_position + Vector3(0.5, 0.35, 0.2)
+		if AMMO_PICKUP_SCENE:
+			var ammo := AMMO_PICKUP_SCENE.instantiate() as Node3D
+			scene_root.add_child(ammo)
+			ammo.global_position = global_position + Vector3(-0.5, 0.1, -0.2)
+	else:
+		# Minion random drop: 25% chance Apple, 25% chance Ammo box (50% drop rate total)
+		var roll := randf()
+		if roll < 0.25 and APPLE_SCENE:
+			var apple := APPLE_SCENE.instantiate() as Node3D
+			scene_root.add_child(apple)
+			apple.scale = Vector3(0.055, 0.055, 0.055)
+			apple.global_position = global_position + Vector3(0, 0.35, 0)
+		elif roll < 0.50 and AMMO_PICKUP_SCENE:
+			var ammo := AMMO_PICKUP_SCENE.instantiate() as Node3D
+			scene_root.add_child(ammo)
+			ammo.global_position = global_position + Vector3(0, 0.1, 0)
 
 func _spawn_death_vfx(pos: Vector3) -> void:
 	if not ENEMY_DEATH_VFX_SCENE:
@@ -714,18 +833,8 @@ func _play_anim(anim_short_name: String, force_restart: bool = false, custom_spe
 	anim_player.play(full_name, 0.18, custom_speed)
 
 func _setup_enemy_audio() -> void:
-	if ResourceLoader.exists("res://import/sound/enemy/getting-hit (2).mp3"):
-		SFX_ENEMY_HIT = load("res://import/sound/enemy/getting-hit (2).mp3")
 	if ResourceLoader.exists("res://import/sound/enemy/enemy-death-sound.mp3"):
 		SFX_ENEMY_DEATH = load("res://import/sound/enemy/enemy-death-sound.mp3")
-
-	if SFX_ENEMY_HIT:
-		hit_audio_3d = AudioStreamPlayer3D.new()
-		hit_audio_3d.name = "EnemyHitAudio3D"
-		hit_audio_3d.stream = SFX_ENEMY_HIT
-		hit_audio_3d.unit_size = 6.0
-		hit_audio_3d.max_distance = 28.0
-		add_child(hit_audio_3d)
 	
 	if SFX_ENEMY_DEATH:
 		death_audio_3d = AudioStreamPlayer3D.new()
@@ -734,6 +843,13 @@ func _setup_enemy_audio() -> void:
 		death_audio_3d.unit_size = 7.0
 		death_audio_3d.max_distance = 32.0
 		add_child(death_audio_3d)
+	
+	# Never physically push or let Jessica climb on top of enemies
+	var scene := get_tree().current_scene
+	if scene:
+		var fem := scene.find_child("female", true, false) as PhysicsBody3D
+		if fem:
+			add_collision_exception_with(fem)
 
 func retreat_to_position(target_pos: Vector3, waypoints: Array[Vector3] = []) -> void:
 	story_frozen = false
@@ -754,69 +870,84 @@ func retreat_to_position(target_pos: Vector3, waypoints: Array[Vector3] = []) ->
 	_play_anim(run_anim, true, 1.35)
 
 func _is_water_or_pit(test_point: Vector3, space_state: PhysicsDirectSpaceState3D, exclude_list: Array[RID]) -> bool:
-	var down_start := test_point + Vector3(0.0, 1.5, 0.0)
+	if persistent_chase:
+		return false
+	var down_start := test_point + Vector3(0.0, 1.2, 0.0)
 	var down_end := test_point + Vector3(0.0, -3.5, 0.0)
 	var q_down := PhysicsRayQueryParameters3D.create(down_start, down_end)
 	q_down.exclude = exclude_list
 	var res_down := space_state.intersect_ray(q_down)
 	if res_down.is_empty():
-		return true # Cliff/void
+		return true # Deep cliff/void
 	var ground_y: float = res_down.position.y
-	# Water surface is ~0.0 to 0.2; terrain riverbed is < 0.45. Dry ground is >= 0.55!
-	return ground_y < 0.46
+	# Only treat deep riverbed (< 0.05) as water so normal sloped forest terrain is never rejected!
+	return ground_y < 0.05
 
-func _calculate_nav_steering(desired_dir: Vector3, check_distance: float = 2.4) -> Vector3:
+func _is_blocking_obstacle(hit: Dictionary) -> bool:
+	if hit.is_empty():
+		return false
+	var normal: Vector3 = hit.get("normal", Vector3.UP)
+	# Walkable terrain slopes have upward normals (normal.y > 0.42); only vertical trees/rocks/walls block movement!
+	if normal.y > 0.42:
+		return false
+	return true
+
+func _calculate_nav_steering(desired_dir: Vector3, check_distance: float = 1.2) -> Vector3:
 	if desired_dir.length_squared() < 0.001:
 		return Vector3.ZERO
 	desired_dir = desired_dir.normalized()
 	
-	# If currently executing an unstuck sidestep maneuver, prioritize it
+	# If currently executing a brief diagonal unstuck maneuver, blend it with desired_dir
 	if unstuck_timer > 0.0 and unstuck_sidestep_dir.length_squared() > 0.001:
-		return unstuck_sidestep_dir
+		return (desired_dir * 0.45 + unstuck_sidestep_dir * 0.55).normalized()
 		
 	var space_state := get_world_3d().direct_space_state
-	var ray_origin := global_position + Vector3(0.0, 0.55, 0.0)
+	var ray_origin := global_position + Vector3(0.0, 0.38, 0.0)
 	
-	# Exclude self and player from obstacle raycast
+	# Exclude self, player, companion, and all other enemies so enemies never confuse each other for walls!
 	var exclude_list: Array[RID] = [get_rid()]
 	if is_instance_valid(player):
 		exclude_list.append(player.get_rid())
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if e is CollisionObject3D and is_instance_valid(e) and e != self:
+			exclude_list.append(e.get_rid())
+	for c in get_tree().get_nodes_in_group("companion"):
+		if c is CollisionObject3D and is_instance_valid(c):
+			exclude_list.append(c.get_rid())
 		
-	# Check if desired direction leads straight into the river
-	var check_ahead := global_position + desired_dir * 1.6
+	var check_ahead := global_position + desired_dir * 1.1
 	var desired_is_water := _is_water_or_pit(check_ahead, space_state, exclude_list)
 	
 	var center_end := ray_origin + desired_dir * check_distance
 	var query_center := PhysicsRayQueryParameters3D.create(ray_origin, center_end)
 	query_center.exclude = exclude_list
 	var hit_center := space_state.intersect_ray(query_center)
+	var center_blocked := _is_blocking_obstacle(hit_center)
 	
-	if hit_center.is_empty() and not desired_is_water:
-		# Path ahead is clear and dry! Check slight wall slide if touching collider
+	if not center_blocked and not desired_is_water:
 		if is_on_wall():
 			var wn := get_wall_normal()
 			wn.y = 0.0
 			if wn.length_squared() > 0.01:
-				return (desired_dir.slide(wn.normalized()) + wn.normalized() * 0.4).normalized()
+				return (desired_dir.slide(wn.normalized()) + wn.normalized() * 0.25).normalized()
 		return desired_dir
 		
-	# Obstacle or river detected ahead! Test left and right angles to find open, dry ground
-	var angles: Array[float] = [35.0, -35.0, 65.0, -65.0, 90.0, -90.0, 120.0, -120.0]
+	# Vertical obstacle (tree/rock) or deep water ahead! Test gentle left/right angles first
+	var angles: Array[float] = [28.0, -28.0, 52.0, -52.0, 78.0, -78.0]
 	var best_dir := desired_dir
 	var best_clearance := -1.0
 	
 	for a in angles:
 		var test_dir := desired_dir.rotated(Vector3.UP, deg_to_rad(a)).normalized()
-		var candidate_pt := global_position + test_dir * 1.6
+		var candidate_pt := global_position + test_dir * 1.1
 		if _is_water_or_pit(candidate_pt, space_state, exclude_list):
-			continue # Reject river/water directions!
+			continue
 			
 		var test_end := ray_origin + test_dir * check_distance
 		var q := PhysicsRayQueryParameters3D.create(ray_origin, test_end)
 		q.exclude = exclude_list
 		var res := space_state.intersect_ray(q)
-		if res.is_empty():
-			# Found a completely open and dry direction!
+		if not _is_blocking_obstacle(res):
 			best_dir = test_dir
 			break
 		else:
@@ -829,7 +960,7 @@ func _calculate_nav_steering(desired_dir: Vector3, check_distance: float = 2.4) 
 		var wn := get_wall_normal()
 		wn.y = 0.0
 		if wn.length_squared() > 0.01:
-			best_dir = (best_dir + wn.normalized() * 0.6).normalized()
+			best_dir = (best_dir.slide(wn.normalized()) + wn.normalized() * 0.35).normalized()
 			
 	return best_dir
 
@@ -854,20 +985,35 @@ func _update_stuck_detector(delta: float, target_spd: float, intended_dir: Vecto
 		return
 		
 	stuck_check_timer += delta
-	if stuck_check_timer >= 0.35:
-		var moved_dist := global_position.distance_to(last_stuck_check_pos)
-		# If enemy was trying to move fast but moved barely anything (< 0.12m)
-		if moved_dist < 0.12:
-			var perp := intended_dir.cross(Vector3.UP).normalized()
-			unstuck_sidestep_dir = (perp if randf() > 0.5 else -perp).normalized()
-			unstuck_timer = 0.55
+	if stuck_check_timer >= 0.55:
+		var moved_dist := Vector2(global_position.x - last_stuck_check_pos.x, global_position.z - last_stuck_check_pos.z).length()
+		# Only trigger unstuck if physically against a wall/obstacle and barely moved
+		if moved_dist < 0.07 and is_on_wall():
+			var wn := get_wall_normal()
+			wn.y = 0.0
+			var slide_dir := intended_dir.slide(wn.normalized()) if wn.length_squared() > 0.01 else intended_dir.cross(Vector3.UP)
+			if slide_dir.length_squared() < 0.01:
+				slide_dir = intended_dir.cross(Vector3.UP)
+			unstuck_sidestep_dir = slide_dir.normalized()
+			unstuck_timer = 0.40
+			# Small step hop in case stuck on a low terrain root/ledge
+			if is_on_floor():
+				velocity.y = 2.6
 		last_stuck_check_pos = global_position
 		stuck_check_timer = 0.0
+
+func _spawn_emerge_dust_vfx(pos: Vector3) -> void:
+	if not GROUND_EMERGE_DUST_VFX:
+		return
+	var dust := GROUND_EMERGE_DUST_VFX.instantiate() as Node3D
+	if dust:
+		get_tree().current_scene.add_child(dust)
+		dust.global_position = pos
 
 func emerge_from_ground(duration: float = 1.15) -> void:
 	is_emerging = true
 	var final_pos := global_position
-	_spawn_death_vfx(final_pos + Vector3(0.0, 0.08, 0.0))
+	_spawn_emerge_dust_vfx(final_pos + Vector3(0.0, 0.04, 0.0))
 	_play_anim(idle_anim, true)
 	
 	# Keep the root CharacterBody3D safe on the floor so physics collider never penetrates the terrain!

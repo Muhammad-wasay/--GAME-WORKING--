@@ -1,0 +1,127 @@
+[gd_scene load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://script/hint_pickup.gd" id="1_hint"]
+[ext_resource type="Texture2D" path="res://import/hint_paper_bg.png" id="2_paper"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_board"]
+albedo_color = Color(0.28, 0.17, 0.09, 1)
+roughness = 0.75
+
+[sub_resource type="BoxMesh" id="BoxMesh_board"]
+size = Vector3(0.32, 0.018, 0.38)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_clip"]
+albedo_color = Color(0.75, 0.58, 0.22, 1)
+metallic = 0.75
+roughness = 0.28
+
+[sub_resource type="BoxMesh" id="BoxMesh_clip"]
+size = Vector3(0.12, 0.026, 0.045)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_paper"]
+transparency = 1
+albedo_texture = ExtResource("2_paper")
+roughness = 0.65
+emission_enabled = true
+emission = Color(0.85, 0.72, 0.45, 1)
+emission_energy_multiplier = 0.22
+texture_filter = 0
+
+[sub_resource type="BoxMesh" id="BoxMesh_paper"]
+size = Vector3(0.27, 0.008, 0.31)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_roll"]
+albedo_color = Color(0.81, 0.71, 0.52, 1)
+roughness = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_roll"]
+top_radius = 0.014
+bottom_radius = 0.014
+height = 0.26
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_seal"]
+albedo_color = Color(0.72, 0.08, 0.08, 1)
+roughness = 0.32
+emission_enabled = true
+emission = Color(0.85, 0.12, 0.1, 1)
+emission_energy_multiplier = 0.35
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_seal"]
+top_radius = 0.032
+bottom_radius = 0.035
+height = 0.012
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_halo"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 0.8, 0.22, 0.65)
+
+[sub_resource type="TorusMesh" id="TorusMesh_halo"]
+inner_radius = 0.24
+outer_radius = 0.3
+rings = 24
+ring_segments = 12
+
+[node name="HintPickup" type="Node3D"]
+script = ExtResource("1_hint")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+
+[node name="PropPivot" type="Node3D" parent="VisualRoot"]
+transform = Transform3D(0.994522, -0.0644726, 0.0825793, 0.0825793, 0.960347, -0.266259, -0.0644726, 0.271186, 0.960347, 0, 0.24, 0)
+
+[node name="BoardMesh" type="MeshInstance3D" parent="VisualRoot/PropPivot"]
+material_override = SubResource("StandardMaterial3D_board")
+mesh = SubResource("BoxMesh_board")
+
+[node name="ClipMesh" type="MeshInstance3D" parent="VisualRoot/PropPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.015, -0.16)
+material_override = SubResource("StandardMaterial3D_clip")
+mesh = SubResource("BoxMesh_clip")
+
+[node name="PaperMesh" type="MeshInstance3D" parent="VisualRoot/PropPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.012, 0.01)
+material_override = SubResource("StandardMaterial3D_paper")
+mesh = SubResource("BoxMesh_paper")
+
+[node name="ScrollRoll" type="MeshInstance3D" parent="VisualRoot/PropPivot"]
+transform = Transform3D(-4.37114e-08, -1, 0, 1, -4.37114e-08, 0, 0, 0, 1, 0, 0.018, 0.16)
+material_override = SubResource("StandardMaterial3D_roll")
+mesh = SubResource("CylinderMesh_roll")
+
+[node name="WaxSeal" type="MeshInstance3D" parent="VisualRoot/PropPivot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.065, 0.017, 0.095)
+material_override = SubResource("StandardMaterial3D_seal")
+mesh = SubResource("CylinderMesh_seal")
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.38, 0)
+light_color = Color(1, 0.78, 0.25, 1)
+light_energy = 1.45
+omni_range = 3.2
+
+[node name="HaloRing" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.03, 0)
+material_override = SubResource("StandardMaterial3D_halo")
+mesh = SubResource("TorusMesh_halo")
+
+[node name="MarkerLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.56, 0)
+pixel_size = 0.0011
+billboard = 1
+no_depth_test = true
+modulate = Color(1, 0.86, 0.32, 0.92)
+text = "📜 Clue #1"
+font_size = 18
+outline_size = 5
+
+[node name="PromptLabel" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.52, 0)
+visible = false
+pixel_size = 0.001
+billboard = 1
+no_depth_test = true
+modulate = Color(1, 0.92, 0.45, 1)
+text = "[E] Read Clue #1"
+font_size = 20
+outline_size = 6

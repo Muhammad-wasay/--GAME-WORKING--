@@ -65,6 +65,8 @@ func _try_unlock_cage() -> void:
 		return
 	
 	is_unlocked = true
+	if player_node.has_method("consume_key"):
+		player_node.consume_key()
 	if interaction_label:
 		interaction_label.visible = false
 	

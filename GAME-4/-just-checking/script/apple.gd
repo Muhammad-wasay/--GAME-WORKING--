@@ -4,19 +4,76 @@ var player_in_range = false
 var player_node = null
 var is_picked_up = false
 var saved_main_scene = null
-#@onready var interaction_label: Label3D = $interaction
-@onready var interaction_label: Node3D = $item_interaction
+var bob_time: float = 0.0
+var apple_mesh_instances: Array[MeshInstance3D] = []
+var omni_light: OmniLight3D = null
+var overhead_label: Label3D = null
 
+@onready var interaction_label: Node3D = $item_interaction
 @onready var detection_area: Area3D = $Area3D
 
 func _ready() -> void:
 	saved_main_scene = get_tree().current_scene
+	
+	# Excessive rolling / spinning rokne ke liye damping aur stable physics settings
+	angular_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
+	angular_damp = 15.0
+	linear_damp_mode = RigidBody3D.DAMP_MODE_REPLACE
+	linear_damp = 6.0
+	can_sleep = true
+	if physics_material_override:
+		physics_material_override.friction = 1.0
+		physics_material_override.rough = true
+		physics_material_override.bounce = 0.0
 	
 	detection_area.body_entered.connect(_on_body_entered)
 	detection_area.body_exited.connect(_on_body_exited)
 	
 	if interaction_label:
 		interaction_label.visible = false
+		var lbl := interaction_label.get_node_or_null("interaction") as Label3D
+		if lbl:
+			lbl.text = "[E] Apple (+25 HP)"
+			lbl.font_size = 28
+			lbl.outline_size = 6
+	
+	_setup_shiny_glow()
+
+func _gather_meshes(node: Node) -> void:
+	if node is MeshInstance3D:
+		apple_mesh_instances.append(node)
+	for child in node.get_children():
+		_gather_meshes(child)
+
+func _setup_shiny_glow() -> void:
+	_gather_meshes(self)
+	
+	# Duplicate and configure glowing emission on apple mesh
+	for m in apple_mesh_instances:
+		if not m or not m.mesh:
+			continue
+		var surf_count := m.mesh.get_surface_count()
+		for s in range(surf_count):
+			var orig_mat := m.get_active_material(s)
+			var shiny_mat: StandardMaterial3D = null
+			if orig_mat is StandardMaterial3D:
+				shiny_mat = orig_mat.duplicate() as StandardMaterial3D
+			else:
+				shiny_mat = StandardMaterial3D.new()
+			shiny_mat.emission_enabled = true
+			shiny_mat.emission = Color(1.0, 0.32, 0.12)
+			shiny_mat.emission_energy_multiplier = 0.95
+			shiny_mat.rim_enabled = true
+			shiny_mat.rim = 0.75
+			m.set_surface_override_material(s, shiny_mat)
+	
+	# Warm soft OmniLight3D
+	omni_light = OmniLight3D.new()
+	omni_light.name = "AppleGlowLight"
+	omni_light.light_color = Color(1.0, 0.45, 0.18)
+	omni_light.light_energy = 0.75
+	omni_light.omni_range = 1.6
+	add_child(omni_light)
 
 func _on_body_entered(body: Node3D) -> void:
 	if body is CharacterBody3D and not is_picked_up:
@@ -24,7 +81,6 @@ func _on_body_entered(body: Node3D) -> void:
 		player_node = body
 		if "nearby_apple" in body:
 			body.nearby_apple = self
-		print("Press E to pick up the item!")
 		# Jab player paas aaye toh text dikha do
 		if interaction_label:
 			interaction_label.visible = true
@@ -42,7 +98,21 @@ func _on_body_exited(body: Node3D) -> void:
 		if interaction_label:
 			interaction_label.visible = false
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	bob_time += delta * 3.0
+	
+	# Pulsing shiny emission
+	var pulse := 1.2 + sin(bob_time) * 0.45
+	for m in apple_mesh_instances:
+		if is_instance_valid(m) and m.mesh:
+			for s in range(m.mesh.get_surface_count()):
+				var mat := m.get_surface_override_material(s) as StandardMaterial3D
+				if mat:
+					mat.emission_energy_multiplier = pulse
+	
+	if omni_light:
+		omni_light.light_energy = 0.7 + sin(bob_time) * 0.25
+	
 	if player_in_range and not is_picked_up:
 		if Input.is_action_just_pressed("interact"):
 			pick_up()
@@ -87,6 +157,10 @@ func pick_up() -> void:
 	# Uthate hi object ke oopar wala text gayab ho jaye
 	if interaction_label:
 		interaction_label.visible = false
+	if overhead_label:
+		overhead_label.visible = false
+	if omni_light:
+		omni_light.visible = false
 	
 	freeze = true
 	
@@ -102,6 +176,10 @@ func pick_up() -> void:
 
 func drop_item() -> void:
 	is_picked_up = false
+	if overhead_label:
+		overhead_label.visible = true
+	if omni_light:
+		omni_light.visible = true
 	
 	var parent = get_parent()
 	if parent:
@@ -120,12 +198,11 @@ func drop_item() -> void:
 	# Physics unfreeze ki taake gravity kaam kare
 	freeze = false
 	
-	# 2. Real physics ke sath chota sa throw (Roblox style arc)
-	# Na bohot door jaye ga, na direct niche gire ga, balki halka sa aage uchal kar zameen par aayega
-	var throw_impulse = (forward_dir * 0.3) + Vector3(0, 1.0, 0)
+	# 2. Gentle drop without excessive bounce or spinning
+	var throw_impulse = (forward_dir * 0.25) + Vector3(0, 0.35, 0)
 	apply_central_impulse(throw_impulse)
 	
-	angular_velocity = Vector3(randf_range(-2.0, 2.0), randf_range(-2.0, 2.0), randf_range(-2.0, 2.0))
+	angular_velocity = Vector3.ZERO
 	
 	detection_area.monitoring = true
 	print("Item dropped with real physics and correct direction!")

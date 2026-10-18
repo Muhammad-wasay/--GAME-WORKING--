@@ -1,0 +1,19 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+uid="uid://rnr1shyy6iy"
+path="res://.godot/imported/we should get some rest.mp3-fe32dd6db0906f487f9dd97304dfb353.mp3str"
+
+[deps]
+
+source_file="res://import/sound/comic_intro_sfx/we should get some rest.mp3"
+dest_files=["res://.godot/imported/we should get some rest.mp3-fe32dd6db0906f487f9dd97304dfb353.mp3str"]
+
+[params]
+
+loop=false
+loop_offset=0
+bpm=0
+beat_count=0
+bar_beats=4

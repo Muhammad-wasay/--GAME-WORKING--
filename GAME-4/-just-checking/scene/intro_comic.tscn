@@ -1,0 +1,129 @@
+[gd_scene load_steps=5 format=3 uid="uid://cintrocomic001"]
+
+[ext_resource type="Script" path="res://script/intro_comic.gd" id="1_introscript"]
+[ext_resource type="FontFile" uid="uid://xhfgdo8plti8" path="res://import/font-text/ballad_of_dwight_frye/Ballad of Dwight Frye.ttf" id="2_font"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_comic"]
+bg_color = Color(0.02, 0.02, 0.03, 1)
+border_width_left = 6
+border_width_top = 6
+border_width_right = 6
+border_width_bottom = 6
+border_color = Color(0.96, 0.96, 0.98, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+shadow_color = Color(0, 0, 0, 0.9)
+shadow_size = 24
+shadow_offset = Vector2(0, 8)
+
+[node name="IntroComic" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_introscript")
+
+[node name="BlackBg" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.04, 0.045, 0.06, 1)
+
+[node name="ComicContainer" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PanelFrame" type="PanelContainer" parent="ComicContainer"]
+clip_contents = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -560.0
+offset_top = -325.0
+offset_right = 560.0
+offset_bottom = 305.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(560, 315)
+theme_override_styles/panel = SubResource("StyleBoxFlat_comic")
+
+[node name="PanelTexture" type="TextureRect" parent="ComicContainer/PanelFrame"]
+layout_mode = 2
+pivot_offset = Vector2(554, 309)
+expand_mode = 1
+stretch_mode = 6
+
+[node name="PageIndicator" type="Label" parent="ComicContainer"]
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -240.0
+offset_top = 18.0
+offset_right = -40.0
+offset_bottom = 48.0
+grow_horizontal = 0
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(0.96, 0.82, 0.32, 0.9)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.95)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+text = "PROLOGUE 1 / 7"
+horizontal_alignment = 2
+
+[node name="SkipHint" type="Label" parent="ComicContainer"]
+visible = false
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -300.0
+offset_top = -42.0
+offset_right = 300.0
+offset_bottom = -14.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 17
+theme_override_colors/font_color = Color(0.72, 0.76, 0.82, 0.65)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.85)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+text = "[SPACE / CLICK] NEXT PANEL   •   [ESC] SKIP TO GAME"
+horizontal_alignment = 1
+
+[node name="FadeRect" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 1)
+
+[node name="SfxFlipPlayer" type="AudioStreamPlayer" parent="."]
+volume_db = -2.0
+
+[node name="SfxAmbiencePlayer" type="AudioStreamPlayer" parent="."]
+volume_db = -1.0
+
+[node name="SfxVoicePlayer" type="AudioStreamPlayer" parent="."]
+volume_db = 2.0

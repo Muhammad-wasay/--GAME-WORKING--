@@ -11,82 +11,141 @@ var base_model_y: float = 0.28
 @onready var interaction_label: Node3D = $item_interaction
 @onready var omni_light: OmniLight3D = $OmniLight3D
 
-var overhead_key_label: Label3D = null
-var beacon_beam: MeshInstance3D = null
+var ground_ring: MeshInstance3D = null
+var ring_mat: StandardMaterial3D = null
 
 func _ready() -> void:
-	base_model_y = key_visual.position.y if key_visual else 0.28
+	base_model_y = 0.22
+	if key_visual:
+		key_visual.position = Vector3(0, base_model_y, 0)
 	
 	# If user has KEY.scn in root, prioritize and instantiate it
+	var active_model: Node3D = null
 	if ResourceLoader.exists("res://KEY.scn"):
 		var key_scn := load("res://KEY.scn") as PackedScene
 		if key_scn and key_visual:
-			# Remove old fallback model
 			for c in key_visual.get_children():
+				key_visual.remove_child(c)
 				c.queue_free()
-			var user_key := key_scn.instantiate()
+			var user_key := key_scn.instantiate() as Node3D
 			user_key.name = "UserKeyModel"
 			key_visual.add_child(user_key)
-			user_key.position = Vector3.ZERO
+			active_model = user_key
+	elif key_visual and key_visual.get_child_count() > 0:
+		active_model = key_visual.get_child(0) as Node3D
 	
-	# Apply golden glow material to any meshes inside key_visual
+	# Center the key model precisely at (0,0,0) of KeyVisual and normalize size so it spins 360 in place
+	if active_model:
+		_center_and_scale_model(active_model, 0.22)
+	
+	# Apply shiny golden glow material to meshes inside key_visual
 	_apply_golden_glow(key_visual)
 	
-	# Create overhead 3D billboard text so key is visible anywhere in the forest
-	overhead_key_label = Label3D.new()
-	overhead_key_label.name = "KeyNameLabel"
-	overhead_key_label.text = "🔑 CAGE KEY"
-	overhead_key_label.font_size = 32
-	overhead_key_label.pixel_size = 0.004
-	overhead_key_label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	overhead_key_label.no_depth_test = true
-	overhead_key_label.modulate = Color(1.0, 0.88, 0.25, 1.0)
-	overhead_key_label.outline_size = 10
-	overhead_key_label.outline_modulate = Color(0, 0, 0, 0.95)
-	overhead_key_label.position = Vector3(0, 0.85, 0)
-	add_child(overhead_key_label)
+	# Subtle ground halo ring (no vertical pillar!)
+	_create_ground_ring()
 	
-	# Create vertical golden light beacon pillar
-	_create_beacon_beam()
+	if omni_light:
+		omni_light.light_energy = 1.35
+		omni_light.omni_range = 2.2
 	
 	if detection_area:
 		detection_area.body_entered.connect(_on_body_entered)
 		detection_area.body_exited.connect(_on_body_exited)
 	if interaction_label:
 		interaction_label.visible = false
+		interaction_label.position = Vector3(0, 0.42, 0)
 		var lbl := interaction_label.get_node_or_null("interaction") as Label3D
 		if lbl:
-			lbl.text = "Press E to pick up Cage Key"
-			lbl.modulate = Color(1.0, 0.88, 0.32, 1.0)
+			lbl.transform = Transform3D.IDENTITY
+			lbl.pixel_size = 0.0010
+			lbl.font_size = 20
+			lbl.outline_size = 6
+			lbl.text = "[E] Pick up Cage Key"
+			lbl.modulate = Color(1.0, 0.90, 0.35, 1.0)
 
-func _create_beacon_beam() -> void:
-	beacon_beam = MeshInstance3D.new()
-	beacon_beam.name = "GoldBeaconBeam"
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = 0.12
-	cyl.bottom_radius = 0.12
-	cyl.height = 3.5
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-	mat.albedo_color = Color(1.0, 0.82, 0.22, 0.28)
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	cyl.material = mat
-	beacon_beam.mesh = cyl
-	beacon_beam.position = Vector3(0, 1.75, 0)
-	add_child(beacon_beam)
+func _create_ground_ring() -> void:
+	ground_ring = MeshInstance3D.new()
+	ground_ring.name = "GroundGlowRing"
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.14
+	torus.outer_radius = 0.18
+	torus.rings = 24
+	torus.ring_segments = 12
+	ring_mat = StandardMaterial3D.new()
+	ring_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	ring_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	ring_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	ring_mat.albedo_color = Color(1.0, 0.82, 0.22, 0.55)
+	ring_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	torus.material = ring_mat
+	ground_ring.mesh = torus
+	ground_ring.position = Vector3(0, 0.03, 0)
+	add_child(ground_ring)
+
+func _gather_meshes(node: Node, list: Array[MeshInstance3D]) -> void:
+	if node is MeshInstance3D and node.mesh:
+		list.append(node)
+	for child in node.get_children():
+		_gather_meshes(child, list)
+
+func _get_transform_relative_to(node: Node3D, ancestor: Node3D) -> Transform3D:
+	var t := Transform3D.IDENTITY
+	var cur: Node3D = node
+	while cur and cur != ancestor:
+		t = cur.transform * t
+		cur = cur.get_parent() as Node3D
+	return t
+
+func _center_and_scale_model(root: Node3D, target_max_size: float) -> void:
+	root.position = Vector3.ZERO
+	root.scale = Vector3.ONE
+	var meshes: Array[MeshInstance3D] = []
+	_gather_meshes(root, meshes)
+	if meshes.is_empty():
+		return
+	
+	var total_min := Vector3(INF, INF, INF)
+	var total_max := Vector3(-INF, -INF, -INF)
+	for m in meshes:
+		if m.mesh:
+			var aabb: AABB = m.mesh.get_aabb()
+			var t_to_root: Transform3D = _get_transform_relative_to(m, root)
+			var corners: Array[Vector3] = [
+				aabb.position,
+				aabb.position + Vector3(aabb.size.x, 0, 0),
+				aabb.position + Vector3(0, aabb.size.y, 0),
+				aabb.position + Vector3(0, 0, aabb.size.z),
+				aabb.position + Vector3(aabb.size.x, aabb.size.y, 0),
+				aabb.position + Vector3(aabb.size.x, 0, aabb.size.z),
+				aabb.position + Vector3(0, aabb.size.y, aabb.size.z),
+				aabb.position + aabb.size
+			]
+			for c in corners:
+				var local_c: Vector3 = t_to_root * c
+				total_min = total_min.min(local_c)
+				total_max = total_max.max(local_c)
+	
+	if total_min.x != INF:
+		var raw_size: Vector3 = total_max - total_min
+		var max_dim: float = maxf(raw_size.x, maxf(raw_size.y, raw_size.z))
+		var s: float = (target_max_size / max_dim) if max_dim > 0.0001 else 0.08
+		root.scale = Vector3(s, s, s)
+		var raw_center: Vector3 = (total_min + total_max) * 0.5
+		# Offset by scaled basis * raw_center so the geometric center sits at (0,0,0) of KeyVisual!
+		root.position = -(root.basis * raw_center)
 
 func _apply_golden_glow(node: Node) -> void:
 	if not node:
 		return
 	var gold_mat := StandardMaterial3D.new()
 	gold_mat.albedo_color = Color(1.0, 0.85, 0.25, 1.0)
-	gold_mat.metallic = 0.92
-	gold_mat.roughness = 0.18
+	gold_mat.metallic = 0.90
+	gold_mat.roughness = 0.20
 	gold_mat.emission_enabled = true
 	gold_mat.emission = Color(1.0, 0.78, 0.20, 1.0)
-	gold_mat.emission_energy_multiplier = 1.45
+	gold_mat.emission_energy_multiplier = 1.25
+	gold_mat.rim_enabled = true
+	gold_mat.rim = 0.85
 	
 	for child in node.get_children():
 		if child is MeshInstance3D:
@@ -111,8 +170,10 @@ func _on_body_exited(body: Node3D) -> void:
 func _process(delta: float) -> void:
 	bob_time += delta * 2.8
 	if key_visual:
-		key_visual.rotate_y(delta * 1.8)
-		key_visual.position.y = base_model_y + sin(bob_time) * 0.07
+		key_visual.rotate_y(delta * 2.0)
+		key_visual.position = Vector3(0.0, base_model_y + sin(bob_time) * 0.04, 0.0)
+	if ring_mat:
+		ring_mat.albedo_color.a = 0.35 + (sin(bob_time * 1.5) * 0.5 + 0.5) * 0.35
 	
 	if player_in_range and not is_picked_up:
 		if Input.is_action_just_pressed("interact"):

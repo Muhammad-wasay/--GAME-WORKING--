@@ -14,4 +14,4 @@ func _on_start_pressed() -> void:
 	$buttonsound.play()
 	var tween := create_tween()
 	tween.tween_property($StartSound, "volume_db", -40.0, 0.8)
-	fade_in_fade_out_component.NextLevel("res://scene/world.tscn")
+	fade_in_fade_out_component.NextLevel("res://scene/intro_comic.tscn")

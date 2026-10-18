@@ -6,7 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://bsutw7nycl728" path="res://import/UI/Buttons/Button_Hover_3Slides.png" id="3_uharj"]
 [ext_resource type="Texture2D" uid="uid://bsvcdq68rgqjd" path="res://import/UI/Buttons/Button_Disable_3Slides.png" id="4_j880g"]
 [ext_resource type="FontFile" uid="uid://xhfgdo8plti8" path="res://import/font-text/ballad_of_dwight_frye/Ballad of Dwight Frye.ttf" id="5_owxrc"]
-[ext_resource type="AudioStream" uid="uid://bb005rskdbeqy" path="res://import/sound/gametheme.wav" id="7_j880g"]
+[ext_resource type="AudioStream" uid="uid://digtoeb6nqwek" path="res://import/sound/freesound_community-11102013_space_gaming-24007.mp3" id="7_owxrc"]
 [ext_resource type="AudioStream" uid="uid://c7ybasgxu2evq" path="res://import/sound/button click sound/freesoundeffects-button-click-289742.mp3" id="8_j880g"]
 [ext_resource type="Script" uid="uid://da43tnc1g1nqy" path="res://script/fade_in_fade_out_component.gd" id="9_owxrc"]
 
@@ -110,7 +110,7 @@ mouse_filter = 2
 color = Color(0, 0, 0, 1)
 
 [node name="StartSound" type="AudioStreamPlayer2D" parent="." unique_id=1675564698]
-stream = ExtResource("7_j880g")
+stream = ExtResource("7_owxrc")
 autoplay = true
 
 [node name="buttonsound" type="AudioStreamPlayer2D" parent="." unique_id=216304374]

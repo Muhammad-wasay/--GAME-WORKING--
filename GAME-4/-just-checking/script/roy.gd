@@ -11,8 +11,11 @@ const CROUCH_SPEED = 1.0
 const SWIM_SPEED = 1.5
 var is_jumping := false
 var in_air := false
-const JUMP_KEEPS_MOMENTUM := false
+const JUMP_KEEPS_MOMENTUM := true
 var jump_velocity_xz := Vector3.ZERO
+var default_shape_height: float = 1.2316895
+var default_shape_pos_y: float = 0.600182
+var default_floor_snap: float = 0.35
 @onready var collision_shape_3d: CollisionShape3D = $CollisionShape3D
 @onready var hotbar_ui: Node = get_node_or_null("HotbarUI")
 #@onready var footstep_player: AudioStreamPlayer3D = $Node3D/FootstepPlayer
@@ -44,6 +47,8 @@ const BULLET_IMPACT_SCENE = preload("res://vfx/bullet_impact.tscn")
 const BULLET_TRACER_SCENE = preload("res://vfx/bullet_tracer.tscn")
 const PISTOL_IDLE_MAIN_ANIM = preload("res://animations/pistol_idle_main.anim")
 const PLAYER_HIT_REACTION_ANIM = preload("res://animations/player_hit_reaction.anim")
+const PLAYER_DEATH_ANIM = preload("res://import/enemies/falling-back-death.anim")
+const ENEMY_DEATH_VFX_SCENE = preload("res://vfx/enemy_death_vfx.tscn")
 
 # ===== PLAYER AUDIO STREAMS =====
 var SFX_FOOTSTEP: AudioStream = null
@@ -56,8 +61,20 @@ var sfx_crouch_player: AudioStreamPlayer = null
 var sfx_swim_player: AudioStreamPlayer = null
 var sfx_hit_player: AudioStreamPlayer = null
 var footstep_timer: float = 0.0
-var dialogue_locked: bool = false
 var has_cage_key: bool = false
+var dialogue_locked: bool = false
+
+# ===== AMMO SYSTEM =====
+const MAGAZINE_SIZE: int = 12
+var clip_ammo: int = 12
+var reserve_ammo: int = 6
+var current_ammo: int = 18
+var max_ammo: int = 60
+var ammo_hud_layer: CanvasLayer = null
+var ammo_hud_container: Control = null
+var ammo_hud_label: Label = null
+var sfx_gunshot_player: AudioStreamPlayer = null
+var SFX_GUNSHOT: AudioStream = null
 
 var can_fire := true
 var fire_cooldown := 0.22
@@ -68,7 +85,7 @@ var hit_react_timer := 0.0
 var muzzle_flash_node: Node3D = null
 var crosshair_layer: CanvasLayer = null
 
-# ===== HEALTH / STAMINA =====
+# ===== HEALTH / STAMINA / DEATH / VFX =====
 const MAX_HEALTH := 100.0
 const MAX_STAMINA := 100.0
 const STAMINA_DRAIN := 20.0   # per second jab bhag raha ho
@@ -87,12 +104,21 @@ var tip_popup: TipPopup = null
 var shown_tips: Dictionary = {}
 var nearby_apple: Node = null
 
+var is_dead: bool = false
+var invulnerable_timer: float = 0.0
+var damage_flash_alpha: float = 0.0
+var vignette_pulse_time: float = 0.0
+var damage_vignette_mat: ShaderMaterial = null
+var death_ui_layer: CanvasLayer = null
+var player_body_materials: Array[StandardMaterial3D] = []
+
 @export var toon_material: Material
 
 func apply_toon_to_children(node: Node) -> void:
 	for child in node.get_children():
 		if child is MeshInstance3D:
-			child.material_override = toon_material
+			if toon_material:
+				child.material_override = toon_material
 		
 		if child.get_child_count() > 0:
 			apply_toon_to_children(child)
@@ -112,12 +138,18 @@ func _update_camera_effects(delta: float) -> void:
 	blur_amount = lerp(blur_amount, target_blur, t)
 	blur_rect.material.set_shader_parameter("strength", blur_amount)
 func _ready() -> void:
+	if collision_shape_3d and collision_shape_3d.shape:
+		if collision_shape_3d.shape is CapsuleShape3D:
+			default_shape_height = collision_shape_3d.shape.height
+		default_shape_pos_y = collision_shape_3d.position.y
+	default_floor_snap = floor_snap_length
 	base_fov = camera.fov
 	base_cam_pos = camera.position
 	held_gun.visible = false
 	print("PLAYER READY | hotbar_ui = ", hotbar_ui)
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	apply_toon_to_children(self)
+	_prepare_player_body_materials()
 	
 	# Instruction banner UI add karna
 	if INSTRUCTION_BANNER_SCENE:
@@ -129,10 +161,22 @@ func _ready() -> void:
 		hotbar_ui.item_selected.connect(_on_hotbar_item_selected)
 	
 	_setup_bars()
+	_setup_damage_vignette()
 	_setup_gun_and_crosshair()
 	_setup_audio()
+	_setup_gunshot_sound()
+	_setup_ammo_hud()
 
 func _input(event: InputEvent) -> void:
+	if is_dead:
+		if event is InputEventKey and event.pressed and not event.echo:
+			if event.keycode == KEY_R or event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER or event.keycode == KEY_SPACE:
+				_respawn_player()
+			elif event.keycode == KEY_Q:
+				get_tree().quit()
+			elif event.keycode == KEY_M:
+				get_tree().reload_current_scene()
+		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		rotate_y(deg_to_rad(-event.relative.x * sens_horizontal))
 		visuals.rotate_y(deg_to_rad(event.relative.x * sens_horizontal))
@@ -140,6 +184,18 @@ func _input(event: InputEvent) -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_camera_effects(delta)
+	_update_damage_vignette(delta)
+	if invulnerable_timer > 0.0:
+		invulnerable_timer -= delta
+	
+	if is_dead:
+		velocity.x = move_toward(velocity.x, 0.0, WALK_SPEED * 5.0)
+		velocity.z = move_toward(velocity.z, 0.0, WALK_SPEED * 5.0)
+		if not is_on_floor():
+			velocity += get_gravity() * delta
+		move_and_slide()
+		return
+	
 	_update_stamina(delta)
 	if fire_timer > 0.0:
 		fire_timer -= delta
@@ -170,72 +226,87 @@ func _physics_process(delta: float) -> void:
 	
 	# ===== AGAR PLAYER PANI KE ANDAR HO (SWIMMING MODE) =====
 	if is_swimming:
+		floor_snap_length = 0.0
 		var swim_input_dir := Input.get_vector("right", "left", "backward", "forward")
 		var swim_direction := (transform.basis * Vector3(swim_input_dir.x, 0, swim_input_dir.y)).normalized()
 		
-		var cur_scale_y = global_basis.get_scale().y
-		var player_height = 1.23 * cur_scale_y
-		var target_y = water_surface_y - (player_height * 0.35)
-		var current_y = global_position.y
-		var y_diff = target_y - current_y
+		var cur_scale_y: float = absf(global_basis.get_scale().y)
+		var player_height: float = default_shape_height * cur_scale_y
+		var target_y: float = water_surface_y - (player_height * 0.35)
+		var current_y: float = global_position.y
+		var y_diff: float = target_y - current_y
+		var submergence: float = water_surface_y - current_y
 		
-		if global_position.y > water_surface_y + (player_height * 0.4):
+		# Seamless exit onto riverbank or shore if feet touch the ground and water is shallow enough to walk
+		if is_on_floor() and submergence < (player_height * 0.60):
 			exit_water()
-			return
-		
-		var max_buoyancy = 3.0 * cur_scale_y
-		var buoyancy_vel = clamp(y_diff * 5.0, -max_buoyancy, max_buoyancy)
-		velocity.y = move_toward(velocity.y, buoyancy_vel, delta * 10.0 * cur_scale_y)
-		
-		if swim_direction:
-			var current_scale = visuals.scale
-			var target_basis = Basis.looking_at(swim_direction, Vector3.UP).rotated(Vector3.UP, PI)
-			var current_quat = visuals.global_transform.basis.get_rotation_quaternion()
-			var target_quat = target_basis.get_rotation_quaternion()
-			visuals.global_transform.basis = Basis(current_quat.slerp(target_quat, delta * 15.0))
-			visuals.scale = current_scale
-			
-			velocity.x = swim_direction.x * SWIM_SPEED
-			velocity.z = swim_direction.z * SWIM_SPEED
-			
-			visuals.position.y = move_toward(visuals.position.y, 0.0, delta * 5.0)
-			
-			if animation_player.current_animation != "NewLib/swimming":
-				animation_player.play("NewLib/swimming", 0.2)
-			if sfx_swim_player and not sfx_swim_player.playing:
-				sfx_swim_player.play()
+			# Don't return early; seamlessly continue into ground walking physics below in the same frame!
 		else:
-			velocity.x = move_toward(velocity.x, 0, SWIM_SPEED * 3.0)
-			velocity.z = move_toward(velocity.z, 0, SWIM_SPEED * 3.0)
+			var max_buoyancy: float = 3.5 * cur_scale_y
+			var buoyancy_vel: float = clamp(y_diff * 6.5, -max_buoyancy, max_buoyancy)
 			
-			visuals.position.y = move_toward(visuals.position.y, -0.2, delta * 5.0)
+			# Space se pani ke upar swim / kinare par jump lagana
+			if Input.is_action_just_pressed("jump"):
+				buoyancy_vel = 3.2 * cur_scale_y
+				velocity.y = JUMP_VELOCITY
+				if is_on_floor() or submergence < (player_height * 0.50):
+					exit_water()
+					is_jumping = true
+					in_air = true
 			
-			if animation_player.current_animation != "NewLib/water_idle":
-				animation_player.play("NewLib/water_idle", 0.2)
-			if sfx_swim_player and sfx_swim_player.playing:
-				sfx_swim_player.stop()
-		
-		if sfx_footstep_player and sfx_footstep_player.playing:
-			sfx_footstep_player.stop()
-		if sfx_crouch_player and sfx_crouch_player.playing:
-			sfx_crouch_player.stop()
-		move_and_slide()
-		return
+			if is_swimming:
+				velocity.y = move_toward(velocity.y, buoyancy_vel, delta * 12.0 * cur_scale_y)
+				
+				if swim_direction:
+					var current_scale = visuals.scale
+					var target_basis = Basis.looking_at(swim_direction, Vector3.UP).rotated(Vector3.UP, PI)
+					var current_quat = visuals.global_transform.basis.get_rotation_quaternion()
+					var target_quat = target_basis.get_rotation_quaternion()
+					visuals.global_transform.basis = Basis(current_quat.slerp(target_quat, delta * 15.0))
+					visuals.scale = current_scale
+					
+					velocity.x = swim_direction.x * SWIM_SPEED
+					velocity.z = swim_direction.z * SWIM_SPEED
+					
+					visuals.position.y = move_toward(visuals.position.y, 0.0, delta * 5.0)
+					
+					if animation_player.current_animation != "NewLib/swimming":
+						animation_player.play("NewLib/swimming", 0.2)
+					if sfx_swim_player and not sfx_swim_player.playing:
+						sfx_swim_player.play()
+				else:
+					velocity.x = move_toward(velocity.x, 0, SWIM_SPEED * 3.0)
+					velocity.z = move_toward(velocity.z, 0, SWIM_SPEED * 3.0)
+					
+					visuals.position.y = move_toward(visuals.position.y, -0.2, delta * 5.0)
+					
+					if animation_player.current_animation != "NewLib/water_idle":
+						animation_player.play("NewLib/water_idle", 0.2)
+					if sfx_swim_player and sfx_swim_player.playing:
+						sfx_swim_player.stop()
+				
+				if sfx_footstep_player and sfx_footstep_player.playing:
+					sfx_footstep_player.stop()
+				if sfx_crouch_player and sfx_crouch_player.playing:
+					sfx_crouch_player.stop()
+				move_and_slide()
+				return
 	
 	# ===== ZAMEEN WALI PHYSICS & ANIMATIONS (NORMAL MODE) =====
 	if Input.is_action_pressed("crouch"):
 		is_crouching = true
 		SPEED = CROUCH_SPEED
 		running = false
-		if collision_shape_3d:
-			collision_shape_3d.shape.height = 1.0
-			collision_shape_3d.position.y = 0.5
+		if collision_shape_3d and collision_shape_3d.shape:
+			collision_shape_3d.shape.height = default_shape_height * 0.75
+			collision_shape_3d.position.y = default_shape_pos_y * 0.75
 	else:
 		if is_crouching:
 			is_crouching = false
 			SPEED = WALK_SPEED
-			if collision_shape_3d:
-				collision_shape_3d.shape.height = 1.0
+			if collision_shape_3d and collision_shape_3d.shape:
+				collision_shape_3d.shape.height = default_shape_height
+				collision_shape_3d.position.y = default_shape_pos_y
 			animation_player.play("NewLib/crouch_to_up", 0.2)
 			
 		if Input.is_action_pressed("run") and not stamina_exhausted:
@@ -247,30 +318,40 @@ func _physics_process(delta: float) -> void:
 	
 	if not is_on_floor():
 		velocity += get_gravity() * delta
+	else:
+		if not is_jumping:
+			floor_snap_length = default_floor_snap
 
 	if Input.is_action_just_pressed("jump") and is_on_floor() and not is_crouching and not is_jumping:
 		is_jumping = true
 		in_air = false
+		floor_snap_length = 0.0
 		velocity.y = JUMP_VELOCITY
-		if JUMP_KEEPS_MOMENTUM:
-			jump_velocity_xz = Vector3(velocity.x, 0, velocity.z)
-		else:
-			jump_velocity_xz = Vector3.ZERO
+		jump_velocity_xz = Vector3(velocity.x, 0, velocity.z)
 		var jump_anim := animation_player.get_animation("NewLib/jump")
-		var air_time := 3.4 * JUMP_VELOCITY / get_gravity().length()
-		var anim_speed := jump_anim.length / air_time
-		animation_player.play("NewLib/jump", 0.1, anim_speed)
+		if jump_anim:
+			var air_time := 3.4 * JUMP_VELOCITY / maxf(get_gravity().length(), 0.1)
+			var anim_speed := jump_anim.length / maxf(air_time, 0.1)
+			animation_player.play("NewLib/jump", 0.1, anim_speed)
 
 	if is_jumping:
 		_stop_movement_sounds()
-		velocity.x = jump_velocity_xz.x
-		velocity.z = jump_velocity_xz.z
+		var air_input_dir := Input.get_vector("right", "left", "backward", "forward")
+		var air_direction := (transform.basis * Vector3(air_input_dir.x, 0, air_input_dir.y)).normalized()
+		if air_direction != Vector3.ZERO:
+			velocity.x = air_direction.x * SPEED
+			velocity.z = air_direction.z * SPEED
+		else:
+			velocity.x = move_toward(velocity.x, 0.0, delta * 3.0)
+			velocity.z = move_toward(velocity.z, 0.0, delta * 3.0)
+		
 		move_and_slide()
 		if not is_on_floor():
 			in_air = true
 		elif in_air:
 			is_jumping = false
 			in_air = false
+			floor_snap_length = default_floor_snap
 		return
 
 	var input_dir := Input.get_vector("right", "left", "backward", "forward")
@@ -310,9 +391,14 @@ func _physics_process(delta: float) -> void:
 				else:
 					if animation_player.current_animation != "NewLib/walking":
 						animation_player.play("NewLib/walking", 0.2)
-				
-		velocity.x = direction.x * SPEED
-		velocity.z = direction.z * SPEED
+		
+		# Wading in shallow water (water dampened speed)
+		var move_speed: float = SPEED
+		if water_surface_y != 0.0 and global_position.y < water_surface_y:
+			move_speed *= 0.85
+		
+		velocity.x = direction.x * move_speed
+		velocity.z = direction.z * move_speed
 		_update_movement_sounds(delta, true)
 	else:
 		if hit_react_timer <= 0.0:
@@ -342,12 +428,14 @@ func enter_water(surface_y: float = 0.0) -> void:
 	is_swimming = true
 	water_surface_y = surface_y
 	visuals.position.y = 0.0
+	floor_snap_length = 0.0
 	_stop_movement_sounds()
 
 func exit_water() -> void:
 	is_swimming = false
 	water_surface_y = 0.0
 	visuals.position.y = 0.0
+	floor_snap_length = default_floor_snap
 	if sfx_swim_player and sfx_swim_player.playing:
 		sfx_swim_player.stop()
 
@@ -423,6 +511,9 @@ func _equip_gun() -> void:
 	held_gun.visible = true
 	if crosshair_layer:
 		crosshair_layer.visible = true
+	if ammo_hud_container:
+		ammo_hud_container.visible = true
+	_update_ammo_hud()
 	animation_player.play("NewLib/pistol_idle_main", 0.25)
 
 func _unequip_gun() -> void:
@@ -433,6 +524,8 @@ func _unequip_gun() -> void:
 	is_firing = false
 	if crosshair_layer:
 		crosshair_layer.visible = false
+	if ammo_hud_container:
+		ammo_hud_container.visible = false
 	animation_player.play("NewLib/idle_2", 0.2)
 
 func _face_aim_direction(weight: float = 1.0) -> void:
@@ -464,6 +557,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			fire_gun()
 			get_viewport().set_input_as_handled()
 	
+	# R key = manual reload from reserve_ammo into clip_ammo
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_R:
+		if gun_equipped and clip_ammo < MAGAZINE_SIZE and reserve_ammo > 0:
+			reload_gun()
+	
 	# ENTER = inventory se selected apple khana (agar zameen par apple paas na ho)
 	if event is InputEventKey and event.pressed and not event.echo \
 			and (event.keycode == KEY_ENTER or event.keycode == KEY_KP_ENTER):
@@ -471,9 +569,42 @@ func _unhandled_input(event: InputEvent) -> void:
 			return # zameen wala apple khud handle karega
 		eat_selected_from_inventory()
 
+func reload_gun() -> void:
+	if reserve_ammo <= 0 or clip_ammo >= MAGAZINE_SIZE:
+		return
+	var needed: int = MAGAZINE_SIZE - clip_ammo
+	var take: int = mini(needed, reserve_ammo)
+	clip_ammo += take
+	reserve_ammo -= take
+	current_ammo = clip_ammo + reserve_ammo
+	_update_ammo_hud()
+
 func fire_gun() -> void:
 	if not gun_equipped or fire_timer > 0.0:
 		return
+	
+	if clip_ammo <= 0:
+		if reserve_ammo > 0:
+			reload_gun()
+		else:
+			show_tip_message("Out of Ammo! Find ammo boxes!", 1.5)
+			return
+	
+	clip_ammo -= 1
+	current_ammo = clip_ammo + reserve_ammo
+	_update_ammo_hud()
+	
+	# Auto-reload when magazine hits 0 and reserve ammo is available
+	if clip_ammo <= 0 and reserve_ammo > 0:
+		get_tree().create_timer(0.32).timeout.connect(func():
+			if is_inside_tree() and clip_ammo <= 0 and reserve_ammo > 0:
+				reload_gun()
+		)
+	
+	# Gunshot sound effect
+	if sfx_gunshot_player:
+		sfx_gunshot_player.pitch_scale = randf_range(0.96, 1.05)
+		sfx_gunshot_player.play()
 	
 	fire_timer = fire_cooldown
 	is_firing = true
@@ -555,7 +686,7 @@ func get_gun_muzzle_global_pos() -> Vector3:
 
 # ===== SETUP GUN & CROSSHAIR =====
 func _setup_gun_and_crosshair() -> void:
-	# Ensure pistol_idle_main and player_hit_reaction are in NewLib
+	# Ensure pistol_idle_main, player_hit_reaction, and player_death are in NewLib
 	var lib = animation_player.get_animation_library("NewLib")
 	if lib:
 		if not lib.has_animation("pistol_idle_main"):
@@ -565,6 +696,10 @@ func _setup_gun_and_crosshair() -> void:
 		var hit_anim_res := lib.get_animation("player_hit_reaction")
 		if hit_anim_res:
 			hit_anim_res.loop_mode = Animation.LOOP_NONE
+		if not lib.has_animation("player_death") and PLAYER_DEATH_ANIM:
+			var death_dup: Animation = PLAYER_DEATH_ANIM.duplicate()
+			death_dup.loop_mode = Animation.LOOP_NONE
+			lib.add_animation("player_death", death_dup)
 		
 		# Fix vertical bobbing/shifting when holding gun, walking with gun, or firing gun:
 		# Lock Hips position to Roy's grounded idle_2 Hips height & strip non-Hips position/scale tracks
@@ -628,6 +763,7 @@ func _normalize_pistol_and_combat_animations(lib: AnimationLibrary) -> void:
 		"pistol_run",
 		"pistol_crouch_idle",
 		"player_hit_reaction",
+		"player_death",
 		"walking",
 		"run",
 		"idle_2"
@@ -640,7 +776,7 @@ func _normalize_pistol_and_combat_animations(lib: AnimationLibrary) -> void:
 		if not anim:
 			continue
 		
-		var is_crouch_anim: bool = (anim_name == "pistol_crouch_idle")
+		var is_crouch_or_death: bool = (anim_name == "pistol_crouch_idle" or anim_name == "player_death")
 		var hips_pos_track_found := false
 		
 		for t in range(anim.get_track_count() - 1, -1, -1):
@@ -669,7 +805,7 @@ func _normalize_pistol_and_combat_animations(lib: AnimationLibrary) -> void:
 				hips_pos_track_found = true
 				var kc := anim.track_get_key_count(t)
 				for k in range(kc):
-					if is_crouch_anim:
+					if is_crouch_or_death:
 						var v: Vector3 = anim.track_get_key_value(t, k)
 						var crouch_y: float = v.y * (0.005946775 if v.y > 0.05 else 1.0)
 						anim.track_set_key_value(t, k, Vector3(base_hips_pos.x, crouch_y, base_hips_pos.z))
@@ -677,7 +813,7 @@ func _normalize_pistol_and_combat_animations(lib: AnimationLibrary) -> void:
 						anim.track_set_key_value(t, k, base_hips_pos)
 		
 		# Ensure a Hips position track exists so blending never interpolates from an unscaled pose
-		if not hips_pos_track_found and not is_crouch_anim:
+		if not hips_pos_track_found and not is_crouch_or_death:
 			var nt := anim.add_track(Animation.TYPE_POSITION_3D)
 			anim.track_set_path(nt, NodePath("Skeleton3D:mixamorig_Hips"))
 			anim.track_insert_key(nt, 0.0, base_hips_pos)
@@ -706,48 +842,336 @@ func _normalize_pistol_and_combat_animations(lib: AnimationLibrary) -> void:
 					for k in range(shoot_anim.track_get_key_count(shoot_t)):
 						shoot_anim.track_set_key_value(shoot_t, k, steady_rot)
 
-# ===== HEALTH =====
+# ===== PLAYER BODY MATERIALS & HEALING VFX =====
+func _prepare_player_body_materials() -> void:
+	player_body_materials.clear()
+	var body_mesh := get_node_or_null("visuals/person/Skeleton3D/node_0") as MeshInstance3D
+	if not body_mesh or not body_mesh.mesh:
+		return
+	for s in range(body_mesh.mesh.get_surface_count()):
+		var orig_mat := body_mesh.get_active_material(s)
+		if orig_mat is StandardMaterial3D:
+			var dup_mat := orig_mat.duplicate() as StandardMaterial3D
+			body_mesh.set_surface_override_material(s, dup_mat)
+			player_body_materials.append(dup_mat)
+
+func _play_heal_vfx() -> void:
+	# 1. Shiny Emerald Green Body Flash on Roy's character mesh (fades back to normal smoothly)
+	for mat in player_body_materials:
+		if is_instance_valid(mat):
+			mat.emission_enabled = true
+			mat.emission = Color(0.15, 1.0, 0.42, 1.0)
+			mat.emission_energy_multiplier = 2.0
+			var mat_tween := create_tween()
+			mat_tween.tween_property(mat, "emission_energy_multiplier", 0.0, 0.85).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	
+	# 2. Temporary emerald green OmniLight3D on Roy's body
+	var heal_light := OmniLight3D.new()
+	heal_light.light_color = Color(0.2, 1.0, 0.45, 1.0)
+	heal_light.light_energy = 2.2
+	heal_light.omni_range = 2.2
+	heal_light.position = Vector3(0.0, 0.65, 0.0)
+	add_child(heal_light)
+	var light_tween := create_tween()
+	light_tween.tween_property(heal_light, "light_energy", 0.0, 0.85)
+	light_tween.tween_callback(heal_light.queue_free)
+	
+	# 3. Rising Green Halo Ring around Roy's body
+	var ring_inst := MeshInstance3D.new()
+	var torus := TorusMesh.new()
+	torus.inner_radius = 0.42
+	torus.outer_radius = 0.50
+	torus.rings = 24
+	torus.ring_segments = 12
+	var r_mat := StandardMaterial3D.new()
+	r_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	r_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	r_mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	r_mat.albedo_color = Color(0.2, 1.0, 0.45, 0.75)
+	r_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	torus.material = r_mat
+	ring_inst.mesh = torus
+	ring_inst.position = Vector3(0.0, 0.15, 0.0)
+	add_child(ring_inst)
+	var ring_tween := create_tween().set_parallel(true)
+	ring_tween.tween_property(ring_inst, "position:y", 1.15, 0.75).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	ring_tween.tween_property(ring_inst, "scale", Vector3(1.25, 1.0, 1.25), 0.75)
+	ring_tween.tween_property(r_mat, "albedo_color:a", 0.0, 0.75)
+	ring_tween.chain().tween_callback(ring_inst.queue_free)
+	
+	# 4. Floating Green "+ + +" 3D Healing Symbols rising close around Roy's body
+	var plus_count: int = 7
+	for i in range(plus_count):
+		var plus_lbl := Label3D.new()
+		plus_lbl.text = "+"
+		plus_lbl.font_size = 28 if (i % 2 == 0) else 22
+		plus_lbl.pixel_size = 0.0045
+		plus_lbl.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		plus_lbl.no_depth_test = true
+		plus_lbl.modulate = Color(0.22, 1.0, 0.45, 0.98)
+		plus_lbl.outline_size = 8
+		plus_lbl.outline_modulate = Color(0.02, 0.28, 0.08, 0.95)
+		
+		var angle: float = (TAU / float(plus_count)) * float(i) + randf_range(-0.2, 0.2)
+		var radius: float = randf_range(0.38, 0.58)
+		var start_y: float = randf_range(0.25, 0.68)
+		plus_lbl.position = Vector3(cos(angle) * radius, start_y, sin(angle) * radius)
+		plus_lbl.scale = Vector3(0.4, 0.4, 0.4)
+		add_child(plus_lbl)
+		
+		var delay: float = float(i) * 0.05
+		var pt := create_tween()
+		if delay > 0.0:
+			pt.tween_interval(delay)
+		pt.tween_property(plus_lbl, "scale", Vector3.ONE, 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		pt.parallel().tween_property(plus_lbl, "position:y", start_y + randf_range(0.55, 0.85), 0.75).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		pt.parallel().tween_property(plus_lbl, "modulate:a", 0.0, 0.75).set_delay(0.15)
+		pt.tween_callback(plus_lbl.queue_free)
+
+# ===== HEALTH, LOW-HP RED SCREEN SHADING, & DEATH =====
 func heal(amount: float) -> bool:
-	if health >= MAX_HEALTH:
+	if is_dead or health >= MAX_HEALTH:
 		return false
 	health = min(MAX_HEALTH, health + amount)
 	_update_health_bar()
+	_play_heal_vfx()
 	return true
 
 func take_damage(amount: float) -> void:
+	if is_dead or invulnerable_timer > 0.0 or dialogue_locked:
+		return
 	health = max(0.0, health - amount)
 	_update_health_bar()
 	_flash_damage_vignette()
 	if sfx_hit_player:
 		sfx_hit_player.pitch_scale = randf_range(0.95, 1.06)
 		sfx_hit_player.play()
+	
+	if health <= 0.0:
+		_trigger_player_death()
+		return
+	
 	# Hit reaction animation (protected by hit_react_timer so idle/walk doesn't cancel it)
 	if animation_player.has_animation("NewLib/player_hit_reaction") and health > 0.0:
 		hit_react_timer = 0.55
 		animation_player.stop()
 		animation_player.play("NewLib/player_hit_reaction", 0.06, 1.35)
 
-func _flash_damage_vignette() -> void:
+func _setup_damage_vignette() -> void:
 	var dmg_layer := get_node_or_null("DamageFlashLayer") as CanvasLayer
-	var dmg_rect: ColorRect = null
 	if not dmg_layer:
 		dmg_layer = CanvasLayer.new()
 		dmg_layer.name = "DamageFlashLayer"
 		dmg_layer.layer = 15
-		dmg_rect = ColorRect.new()
+		var dmg_rect := ColorRect.new()
 		dmg_rect.name = "DamageRect"
 		dmg_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 		dmg_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		dmg_rect.color = Color(0.85, 0.05, 0.05, 0.0)
+		
+		var sh := Shader.new()
+		sh.code = """
+shader_type canvas_item;
+uniform float intensity : hint_range(0.0, 1.0) = 0.0;
+uniform float pulse : hint_range(0.0, 1.0) = 0.0;
+void fragment() {
+	vec2 uv = UV * 2.0 - 1.0;
+	float dist = length(uv);
+	float vig = smoothstep(0.32, 1.25, dist);
+	float center_tint = smoothstep(0.65, 1.45, dist) * 0.35;
+	float alpha = clamp((vig + center_tint) * intensity * (0.86 + 0.14 * pulse), 0.0, 0.90);
+	COLOR = vec4(0.82, 0.03, 0.03, alpha);
+}
+"""
+		damage_vignette_mat = ShaderMaterial.new()
+		damage_vignette_mat.shader = sh
+		dmg_rect.material = damage_vignette_mat
 		dmg_layer.add_child(dmg_rect)
 		add_child(dmg_layer)
-	else:
-		dmg_rect = dmg_layer.get_node_or_null("DamageRect") as ColorRect
+
+func _flash_damage_vignette() -> void:
+	if not damage_vignette_mat:
+		_setup_damage_vignette()
+	damage_flash_alpha = 0.78
+
+func _update_damage_vignette(delta: float) -> void:
+	if not damage_vignette_mat:
+		return
+	if damage_flash_alpha > 0.0:
+		damage_flash_alpha = move_toward(damage_flash_alpha, 0.0, delta * 1.45)
 	
-	if dmg_rect:
-		dmg_rect.color.a = 0.38
-		var t := create_tween()
-		t.tween_property(dmg_rect, "color:a", 0.0, 0.35)
+	# Persistent red edge shading only when health drops below 50 HP
+	var low_hp_intensity: float = 0.0
+	if is_dead:
+		low_hp_intensity = 0.92
+	elif health < 50.0:
+		low_hp_intensity = clampf((50.0 - health) / 50.0, 0.0, 1.0) * 0.85
+	
+	var pulse_speed: float = 6.5 if health <= 25.0 else 3.5
+	vignette_pulse_time += delta * pulse_speed
+	var pulse_val: float = (sin(vignette_pulse_time) * 0.5 + 0.5) if (health < 50.0 and not is_dead) else 0.0
+	
+	var final_intensity: float = maxf(damage_flash_alpha, low_hp_intensity)
+	damage_vignette_mat.set_shader_parameter("intensity", final_intensity)
+	damage_vignette_mat.set_shader_parameter("pulse", pulse_val)
+
+func _trigger_player_death() -> void:
+	if is_dead:
+		return
+	is_dead = true
+	running = false
+	is_firing = false
+	velocity = Vector3.ZERO
+	_stop_movement_sounds()
+	
+	if animation_player:
+		animation_player.stop()
+		if animation_player.has_animation("NewLib/player_death"):
+			animation_player.play("NewLib/player_death", 0.12, 1.0)
+	
+	# Spawn toon cloud poof when body hits ground
+	var dt := create_tween()
+	dt.tween_interval(0.55)
+	dt.tween_callback(func():
+		if ENEMY_DEATH_VFX_SCENE and get_tree().current_scene:
+			var vfx := ENEMY_DEATH_VFX_SCENE.instantiate() as Node3D
+			get_tree().current_scene.add_child(vfx)
+			vfx.global_position = global_position + Vector3(0, 0.1, 0)
+			vfx.scale = Vector3(0.45, 0.45, 0.45)
+	)
+	dt.tween_interval(0.65)
+	dt.tween_callback(_show_death_screen)
+
+var death_title_text: String = "YOU DIED"
+
+func trigger_jessica_died() -> void:
+	if is_dead:
+		return
+	is_dead = true
+	running = false
+	is_firing = false
+	velocity = Vector3.ZERO
+	_stop_movement_sounds()
+	if animation_player:
+		animation_player.stop()
+		if animation_player.has_animation("NewLib/idle"):
+			animation_player.play("NewLib/idle")
+	show_tip_message("JESSICA WAS KILLED! Protect Jessica!", 3.0)
+	var dt := create_tween()
+	dt.tween_interval(0.8)
+	dt.tween_callback(func(): _show_death_screen("JESSICA WAS KILLED!\nMISSION FAILED"))
+
+func _show_death_screen(custom_title: String = "") -> void:
+	if custom_title != "":
+		death_title_text = custom_title
+	if not is_dead:
+		return
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	
+	# Stop world background music / siren so Try Again sound plays clearly
+	var scene_root := get_tree().current_scene
+	if scene_root:
+		var bg_music := scene_root.find_child("AudioStreamPlayer2D", true, false)
+		if bg_music and bg_music.has_method("stop"):
+			bg_music.stop()
+		var siren := scene_root.find_child("EscapeSirenAudio", true, false)
+		if siren and siren.has_method("stop"):
+			siren.stop()
+	
+	if not death_ui_layer:
+		death_ui_layer = CanvasLayer.new()
+		death_ui_layer.name = "PlayerDeathUILayer"
+		death_ui_layer.layer = 30
+		add_child(death_ui_layer)
+		
+		var bg := ColorRect.new()
+		bg.name = "BlackFadeRect"
+		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+		bg.color = Color(0.0, 0.0, 0.0, 0.0)
+		death_ui_layer.add_child(bg)
+		
+		var center := CenterContainer.new()
+		center.set_anchors_preset(Control.PRESET_FULL_RECT)
+		death_ui_layer.add_child(center)
+		
+		var vbox := VBoxContainer.new()
+		vbox.name = "DeathMenuBox"
+		vbox.add_theme_constant_override("separation", 22)
+		vbox.modulate.a = 0.0
+		center.add_child(vbox)
+		
+		var title := Label.new()
+		title.text = death_title_text
+		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		title.add_theme_font_size_override("font_size", 54 if death_title_text.contains("\n") else 68)
+		title.add_theme_color_override("font_color", Color(0.88, 0.14, 0.14, 1.0))
+		title.add_theme_constant_override("outline_size", 12)
+		title.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+		vbox.add_child(title)
+		
+		var btn_row := HBoxContainer.new()
+		btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		btn_row.add_theme_constant_override("separation", 24)
+		vbox.add_child(btn_row)
+		
+		var btn_try_again := Button.new()
+		btn_try_again.text = "  TRY AGAIN  "
+		btn_try_again.custom_minimum_size = Vector2(210, 50)
+		btn_try_again.add_theme_font_size_override("font_size", 22)
+		btn_try_again.pressed.connect(_respawn_player)
+		btn_row.add_child(btn_try_again)
+		
+		var btn_quit := Button.new()
+		btn_quit.text = "  QUIT  "
+		btn_quit.custom_minimum_size = Vector2(210, 50)
+		btn_quit.add_theme_font_size_override("font_size", 22)
+		btn_quit.pressed.connect(func(): get_tree().quit())
+		btn_row.add_child(btn_quit)
+		
+		var sub := Label.new()
+		sub.text = "[R / ENTER] Try Again      [Q] Quit"
+		sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sub.add_theme_font_size_override("font_size", 16)
+		sub.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75, 0.85))
+		vbox.add_child(sub)
+		
+		if ResourceLoader.exists("res://import/sound/try-again-background-sound.mp3"):
+			var try_again_audio := AudioStreamPlayer.new()
+			try_again_audio.name = "TryAgainAudio"
+			var stream := load("res://import/sound/try-again-background-sound.mp3") as AudioStream
+			if stream:
+				var s_dup := stream.duplicate()
+				if s_dup is AudioStreamMP3:
+					s_dup.loop = true
+				try_again_audio.stream = s_dup
+				death_ui_layer.add_child(try_again_audio)
+	
+	death_ui_layer.visible = true
+	var try_audio := death_ui_layer.get_node_or_null("TryAgainAudio") as AudioStreamPlayer
+	if try_audio and not try_audio.playing:
+		try_audio.play()
+	
+	var fade_bg := death_ui_layer.get_node_or_null("BlackFadeRect") as ColorRect
+	var menu_box := death_ui_layer.find_child("DeathMenuBox", true, false) as Control
+	if fade_bg and menu_box:
+		fade_bg.color = Color(0.0, 0.0, 0.0, 0.0)
+		menu_box.modulate.a = 0.0
+		var ft := create_tween()
+		# 1. Ahista ahista black fadeout (1.6 seconds)
+		ft.tween_property(fade_bg, "color:a", 0.96, 1.6).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+		# 2. Black hone ke baad YOU DIED + TRY AGAIN / QUIT fade in
+		ft.tween_property(menu_box, "modulate:a", 1.0, 0.65).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+func _respawn_player() -> void:
+	if not is_dead:
+		return
+	if death_ui_layer:
+		var try_audio := death_ui_layer.get_node_or_null("TryAgainAudio") as AudioStreamPlayer
+		if try_audio:
+			try_audio.stop()
+	if ResourceLoader.exists("res://scene/start_screen.tscn"):
+		get_tree().change_scene_to_file("res://scene/start_screen.tscn")
+	else:
+		get_tree().reload_current_scene()
 
 func _update_health_bar() -> void:
 	if health_bar:
@@ -869,8 +1293,6 @@ func show_tip_message(text: String, duration: float = 2.5) -> void:
 func _setup_audio() -> void:
 	if ResourceLoader.exists("res://import/sound/male_character/freesound_community-footstep-1-83098.mp3"):
 		SFX_FOOTSTEP = load("res://import/sound/male_character/freesound_community-footstep-1-83098.mp3")
-	elif ResourceLoader.exists("res://import/sound/male_character/footstep-sound.wav"):
-		SFX_FOOTSTEP = load("res://import/sound/male_character/footstep-sound.wav")
 		
 	if ResourceLoader.exists("res://import/sound/male_character/crouch_walk.mp3"):
 		SFX_CROUCH_WALK = load("res://import/sound/male_character/crouch_walk.mp3")
@@ -959,6 +1381,11 @@ func has_key() -> bool:
 		return hotbar_ui.has_item("key")
 	return false
 
+func consume_key() -> void:
+	has_cage_key = false
+	if hotbar_ui and hotbar_ui.has_method("remove_item_by_id"):
+		hotbar_ui.remove_item_by_id("key", 1)
+
 func face_world_position(target_pos: Vector3) -> void:
 	var dir := target_pos - global_position
 	dir.y = 0.0
@@ -966,3 +1393,145 @@ func face_world_position(target_pos: Vector3) -> void:
 		var cur_scale := visuals.scale
 		visuals.global_transform.basis = Basis.looking_at(dir.normalized(), Vector3.UP).rotated(Vector3.UP, PI)
 		visuals.scale = cur_scale
+
+# ===== AMMO HUD & SOUND SYSTEM =====
+func _load_clean_ui_tex(path: String, strip_white_bg: bool = true) -> Texture2D:
+	if not ResourceLoader.exists(path):
+		return null
+	var raw_tex := load(path) as Texture2D
+	if not raw_tex:
+		return null
+	var img: Image = raw_tex.get_image()
+	if not img:
+		return raw_tex
+	if img.is_compressed():
+		img.decompress()
+	img.convert(Image.FORMAT_RGBA8)
+	if strip_white_bg:
+		var w: int = img.get_width()
+		var h: int = img.get_height()
+		for y in range(h):
+			for x in range(w):
+				var c: Color = img.get_pixel(x, y)
+				if c.a > 0.0 and c.r > 0.94 and c.g > 0.94 and c.b > 0.94:
+					img.set_pixel(x, y, Color(0, 0, 0, 0))
+	var used_rect: Rect2i = img.get_used_rect()
+	if used_rect.size.x > 8 and used_rect.size.y > 8:
+		img = img.get_region(used_rect)
+	return ImageTexture.create_from_image(img)
+
+func _setup_ammo_hud() -> void:
+	ammo_hud_layer = CanvasLayer.new()
+	ammo_hud_layer.name = "AmmoHudLayer"
+	ammo_hud_layer.layer = 12
+	add_child(ammo_hud_layer)
+	
+	ammo_hud_container = Control.new()
+	ammo_hud_container.name = "AmmoPanel"
+	ammo_hud_layer.add_child(ammo_hud_container)
+	
+	# Bottom right anchor
+	ammo_hud_container.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	ammo_hud_container.offset_left = -258.0
+	ammo_hud_container.offset_top = -104.0
+	ammo_hud_container.offset_right = -22.0
+	ammo_hud_container.offset_bottom = -16.0
+	ammo_hud_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	# 1. Base Layer: Wide horizontal beige parchment banner (ammo_banner_bg.png)
+	var banner_bg := TextureRect.new()
+	banner_bg.name = "AmmoBannerBg"
+	banner_bg.position = Vector2(24.0, 14.0)
+	banner_bg.size = Vector2(212.0, 62.0)
+	banner_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	banner_bg.stretch_mode = TextureRect.STRETCH_SCALE
+	banner_bg.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	banner_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	banner_bg.texture = _load_clean_ui_tex("res://import/UI/ammo_banner_bg.png", true)
+	ammo_hud_container.add_child(banner_bg)
+	
+	# 2. Overlapping Left Badge: Yellow-gold notched badge (ammo_gun_badge.png) on top of banner_bg
+	var yellow_badge := TextureRect.new()
+	yellow_badge.name = "YellowGunBadge"
+	yellow_badge.position = Vector2(0.0, 2.0)
+	yellow_badge.size = Vector2(92.0, 84.0)
+	yellow_badge.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	yellow_badge.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	yellow_badge.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	yellow_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	yellow_badge.texture = _load_clean_ui_tex("res://import/UI/ammo_gun_badge.png", true)
+	ammo_hud_container.add_child(yellow_badge)
+	
+	# 3. Gun Icon on top of the yellow badge (gun_icon.png)
+	var gun_icon := TextureRect.new()
+	gun_icon.name = "GunIcon"
+	gun_icon.position = Vector2(14.0, 14.0)
+	gun_icon.size = Vector2(64.0, 52.0)
+	gun_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	gun_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	gun_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	gun_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	gun_icon.texture = _load_clean_ui_tex("res://import/UI/gun_icon.png", false)
+	yellow_badge.add_child(gun_icon)
+	
+	# 4. Ammo Count Label on the right side of the beige banner (NOT on the yellow badge)
+	ammo_hud_label = Label.new()
+	ammo_hud_label.name = "AmmoLabel"
+	ammo_hud_label.position = Vector2(96.0, 16.0)
+	ammo_hud_label.size = Vector2(128.0, 56.0)
+	ammo_hud_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ammo_hud_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	ammo_hud_label.add_theme_font_size_override("font_size", 24)
+	ammo_hud_label.add_theme_constant_override("outline_size", 6)
+	ammo_hud_label.add_theme_color_override("font_outline_color", Color(0.14, 0.08, 0.04, 0.98))
+	ammo_hud_label.add_theme_color_override("font_color", Color(1.0, 0.94, 0.72, 1.0))
+	ammo_hud_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ammo_hud_container.add_child(ammo_hud_label)
+	
+	ammo_hud_container.visible = gun_equipped
+	_update_ammo_hud()
+
+func _update_ammo_hud() -> void:
+	current_ammo = clip_ammo + reserve_ammo
+	if not ammo_hud_label:
+		return
+	ammo_hud_label.text = "%d / %d" % [clip_ammo, reserve_ammo]
+	if clip_ammo <= 0 and reserve_ammo <= 0:
+		ammo_hud_label.add_theme_color_override("font_color", Color(1.0, 0.25, 0.22, 1.0))
+	elif clip_ammo <= 3:
+		ammo_hud_label.add_theme_color_override("font_color", Color(1.0, 0.68, 0.22, 1.0))
+	else:
+		ammo_hud_label.add_theme_color_override("font_color", Color(1.0, 0.95, 0.76, 1.0))
+
+func add_ammo(amount: int) -> void:
+	var remaining: int = amount
+	if clip_ammo < MAGAZINE_SIZE:
+		var to_clip: int = mini(MAGAZINE_SIZE - clip_ammo, remaining)
+		clip_ammo += to_clip
+		remaining -= to_clip
+	if remaining > 0:
+		reserve_ammo = clampi(reserve_ammo + remaining, 0, max_ammo)
+	current_ammo = clip_ammo + reserve_ammo
+	_update_ammo_hud()
+	print("Player picked up Ammo +%d! Clip: %d / Reserve: %d" % [amount, clip_ammo, reserve_ammo])
+
+func _setup_gunshot_sound() -> void:
+	SFX_GUNSHOT = _find_gunshot_sound()
+	if SFX_GUNSHOT:
+		sfx_gunshot_player = AudioStreamPlayer.new()
+		sfx_gunshot_player.name = "GunshotAudioPlayer"
+		sfx_gunshot_player.stream = SFX_GUNSHOT
+		sfx_gunshot_player.volume_db = -1.5
+		add_child(sfx_gunshot_player)
+
+func _find_gunshot_sound() -> AudioStream:
+	var potential_paths := [
+		"res://import/sound/universfield-pistol-shot-278821.mp3",
+		"res://import/sound/pistol_shot.mp3",
+		"res://import/sound/gunshot.mp3",
+		"res://import/sound/pistol-shot.mp3"
+	]
+	for p in potential_paths:
+		if ResourceLoader.exists(p):
+			return load(p) as AudioStream
+	return null

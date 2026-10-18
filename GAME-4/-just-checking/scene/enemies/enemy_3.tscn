@@ -82,15 +82,16 @@ max_health = 75.0
 run_speed = 1.25
 attack_damage = 8.0
 attack_cooldown = 1.35
-detection_range = 9.0
+detection_range = 3.8
 anim_library = "enemy-3"
 idle_anim = "idle-enemy3"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1535265463]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.84, 0)
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0, 0.6, 0)
 shape = SubResource("CapsuleShape3D_e3")
 
 [node name="Ch36_nonPBR" parent="." unique_id=1385279909 instance=ExtResource("1_e3_model")]
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0, 0, 0)
 
 [node name="Ch36" parent="Ch36_nonPBR/Skeleton3D" parent_id_path=PackedInt32Array(1385279909, 2059969310) index="0" unique_id=787820586]
 mesh = SubResource("ArrayMesh_6hroh")

@@ -38,9 +38,9 @@ shader_parameter/texture_albedo = ExtResource("2_char_tex")
 shader_parameter/cutoff = 0.5
 shader_parameter/smoothing = 0.02
 
-[sub_resource type="CylinderShape3D" id="CylinderShape3D_c1s36"]
-height = 1.2316895
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_c1s36"]
 radius = 0.24560547
+height = 1.2316895
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_oqmbi"]
 render_priority = 0
@@ -419,12 +419,16 @@ shader = ExtResource("25_ln1xi")
 shader_parameter/strength = 0.0
 
 [node name="Roy2" type="CharacterBody3D" unique_id=890759848]
+floor_stop_on_slope = true
+floor_constant_speed = true
+floor_max_angle = 1.13446
+floor_snap_length = 0.35
 script = ExtResource("17_roygd")
 toon_material = SubResource("ShaderMaterial_kvo4g")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=474317093]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.60018206, 0)
-shape = SubResource("CylinderShape3D_c1s36")
+shape = SubResource("CapsuleShape3D_c1s36")
 
 [node name="visuals" type="Node3D" parent="." unique_id=227407661]
 transform = Transform3D(1.08, 0, 0, 0, 1.08, 0, 0, 0, 1.08, 0, 0, 0)

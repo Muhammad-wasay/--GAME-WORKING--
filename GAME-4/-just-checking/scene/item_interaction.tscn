@@ -3,9 +3,10 @@
 [node name="item_interaction" type="Node3D" unique_id=1774469216]
 
 [node name="interaction" type="Label3D" parent="." unique_id=95776536]
-transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0)
+pixel_size = 0.0009
 billboard = 1
-modulate = Color(0.9599507, 0.9599507, 0.9599507, 1)
-text = "Press E to interact
-"
-font_size = 36
+no_depth_test = true
+modulate = Color(1, 0.95, 0.65, 1)
+text = "[E] Pick Up"
+font_size = 20
+outline_size = 6

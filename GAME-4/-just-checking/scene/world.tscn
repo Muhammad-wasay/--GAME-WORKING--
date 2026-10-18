@@ -7,8 +7,8 @@
 [ext_resource type="PackedScene" uid="uid://b0k84ixu2q0cd" path="res://scene/terrain.scn" id="7_hcb8y"]
 [ext_resource type="PackedScene" uid="uid://6gxiul1pw13t" path="res://import/addons/proton_scatter/demos/assets/models/fence_planks.glb" id="7_y3jn2"]
 [ext_resource type="PackedScene" uid="uid://dff5xwmdifdvk" path="res://scene/Roy.tscn" id="7_yur6x"]
+[ext_resource type="PackedScene" uid="uid://cwovojpbaa441" path="res://scene/ammo_pickup.tscn" id="9_ol7uo"]
 [ext_resource type="PackedScene" uid="uid://dum75afh1qd3w" path="res://scene/gun_pickup.tscn" id="10_na5tu"]
-[ext_resource type="PackedScene" path="res://scene/target_box.tscn" id="11_targetbox"]
 [ext_resource type="PackedScene" uid="uid://djvh1qf87lp8r" path="res://scene/enemies/enemy_1.tscn" id="12_enemy1"]
 [ext_resource type="PackedScene" uid="uid://b08cx5oig4pc1" path="res://scene/enemies/enemy_2.tscn" id="13_enemy2"]
 [ext_resource type="AudioStream" uid="uid://cv6kyo21xyljo" path="res://import/sound/game-background-sound.mp3" id="13_f345f"]
@@ -18,6 +18,8 @@
 [ext_resource type="PackedScene" uid="uid://nn85g8eh3tct" path="res://CAGE.scn" id="17_1402k"]
 [ext_resource type="Script" uid="uid://dqvj8tqcyuq4i" path="res://script/story_quest_manager.gd" id="17_storymgr"]
 [ext_resource type="PackedScene" uid="uid://bs4tpqqqsqkl3" path="res://import/models/skell/skeleton.glb" id="18_ol7uo"]
+[ext_resource type="PackedScene" uid="uid://b4ikkae0h7cjq" path="res://scene/waterlayer.tscn" id="19_1402k"]
+[ext_resource type="PackedScene" path="res://scene/hint_pickup.tscn" id="19_hintpickup"]
 
 [sub_resource type="PanoramaSkyMaterial" id="PanoramaSkyMaterial_2kjcg"]
 panorama = ExtResource("1_y3jn2")
@@ -33,8 +35,7 @@ fog_light_color = Color(0.520868, 0.5561465, 0.6110244, 1)
 fog_density = 1.0
 
 [sub_resource type="PhysicsMaterial" id="PhysicsMaterial_6jrnk"]
-friction = 0.25
-bounce = 0.2
+rough = true
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_v56vp"]
 
@@ -100,15 +101,30 @@ size = Vector3(1.2224121, 0.08605957, 0.2794587)
 
 [node name="apple2" parent="." unique_id=1925936510 instance=ExtResource("4_m5mgf")]
 transform = Transform3D(0.05, 0, 0, 0, 0.05, 0, 0, 0, 0.05, 16.24584, 0.6524029, -23.183205)
+mass = 0.2
 physics_material_override = SubResource("PhysicsMaterial_6jrnk")
+linear_damp_mode = 0
+linear_damp = 17.757
+angular_damp_mode = 0
+angular_damp = 0.0
 
 [node name="apple" parent="." unique_id=309267002 instance=ExtResource("4_m5mgf")]
 transform = Transform3D(0.05, 0, 0, 0, 0.042759538, 0.025915667, 0, -0.025915667, 0.042759538, 15.092141, 0.570454, -22.944736)
+mass = 0.2
 physics_material_override = SubResource("PhysicsMaterial_6jrnk")
+linear_damp_mode = 0
+linear_damp = 17.757
+angular_damp_mode = 0
+angular_damp = 0.0
 
 [node name="apple3" parent="." unique_id=651493764 instance=ExtResource("4_m5mgf")]
 transform = Transform3D(0.051, 0, 0, 0, 0.051, 0, 0, 0, 0.051, 15.576934, 0.63986707, -23.313826)
+mass = 0.2
 physics_material_override = SubResource("PhysicsMaterial_6jrnk")
+linear_damp_mode = 0
+linear_damp = 17.757
+angular_damp_mode = 0
+angular_damp = 0.0
 
 [node name="fence_planks2" parent="." unique_id=1470292068 instance=ExtResource("7_y3jn2")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.12819564, -0.0049354844, -0.182105)
@@ -125,36 +141,29 @@ transform = Transform3D(0.3, 0, 0, 0, 0.3, 0, 0, 0, 0.3, 23.827375, 0.8574573, -
 toon_material = null
 
 [node name="Gun" parent="." unique_id=1037323027 instance=ExtResource("10_na5tu")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.859886, 1.5424309, -31.985037)
+transform = Transform3D(0.9464708, -0.011788127, -0.32257414, -0.32278946, -0.034564693, -0.94583946, 0, 0.99933296, -0.036519554, 25.585667, 0.42786348, -37.045746)
 
-[node name="TargetBox1" parent="." unique_id=1283977147 instance=ExtResource("11_targetbox")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.85, 1.2, -27.5)
-
-[node name="TargetBox2" parent="." unique_id=1387231401 instance=ExtResource("11_targetbox")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.8, 1.2, -27.2)
-
-[node name="TargetBox3" parent="." unique_id=1224001150 instance=ExtResource("11_targetbox")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22.9, 1.2, -27.2)
-
-[node name="TargetBox4" parent="." unique_id=1323023711 instance=ExtResource("11_targetbox")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.85, 2.1, -27.5)
+[node name="AmmoPickup2" parent="." unique_id=7057902 instance=ExtResource("9_ol7uo")]
+transform = Transform3D(0.9464713, -0.011788127, -0.32257426, -0.3227896, -0.034564693, -0.9458397, 1.8614026e-09, 0.99933296, -0.03651955, 23.47359, 0.7689594, -38.80021)
 
 [node name="Enemy1_Boss" parent="." unique_id=725332383 instance=ExtResource("12_enemy1")]
-transform = Transform3D(-0.5, 0, -7.54979e-08, 0, 0.5, 0, 7.54979e-08, 0, -0.5, -2.3867755, 1.0114005, 1.8448671)
+transform = Transform3D(-0.5, 0, -7.54979e-08, 0, 0.5, 0, 7.54979e-08, 0, -0.5, -4.0256767, 1.0114005, 0.31652868)
 walk_speed = 0.65
+attack_range = 1.15
 
 [node name="Enemy2_Minion" parent="." unique_id=852180277 instance=ExtResource("13_enemy2")]
-transform = Transform3D(-0.32, 0, 0, 0, 0.32, 0, 0, 0, -0.32, 21.6, 0.9, -22.2)
+transform = Transform3D(-0.32, 0, 0, 0, 0.32, 0, 0, 0, -0.32, 32.79339, 1.474315, -21.210419)
 walk_speed = 0.65
 
 [node name="Enemy3_Minion" parent="." unique_id=1935589875 instance=ExtResource("14_enemy3")]
-transform = Transform3D(-0.32, 0, 0, 0, 0.32, 0, 0, 0, -0.32, 26.1, 0.9, -22.2)
+transform = Transform3D(-0.32, 0, 0, 0, 0.32, 0, 0, 0, -0.32, 33.875114, 0.9272516, -25.111797)
+detection_range = 9.0
 
 [node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="." unique_id=1564305045]
 stream = ExtResource("13_f345f")
 
 [node name="Node3D2" parent="." unique_id=270298504 instance=ExtResource("14_bqa5m")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -77.190155, -0.9135704, -6.212082)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -77.190155, -2.642686, -6.212082)
 
 [node name="Node3D2" parent="Node3D2" unique_id=477264913 instance=ExtResource("14_bqa5m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.40242767, -3.1280193, 43.25614)
@@ -169,12 +178,76 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 98.57836, -1.8534489, 74.1119
 script = ExtResource("17_storymgr")
 
 [node name="female" parent="." unique_id=42649498 instance=ExtResource("16_e4vd1")]
-transform = Transform3D(-0.6890315, 0, 0.12343312, 0.0019252216, 0.6999148, 0.010747021, -0.12341811, 0.010918102, -0.6889477, 1.6730809, 0.8554168, 9.62198)
+transform = Transform3D(-0.4331055, 0, 0.0775865, 0.0012101, 0.4399465, 0.0067553, -0.0775771, 0.0068628, -0.4330528, 1.6730809, 0.8554168, 9.62198)
 
 [node name="Node3D3" parent="." unique_id=861669155 instance=ExtResource("17_1402k")]
 transform = Transform3D(-0.20670946, 0, 0.037029933, 0, 0.21000001, 0, -0.037029933, 0, -0.20670946, 1.6730809, 0.73190117, 9.62198)
 
 [node name="Sketchfab_Scene" parent="." unique_id=203484555 instance=ExtResource("18_ol7uo")]
 transform = Transform3D(0.0029382317, -0.49999136, 4.9018802e-09, -0.032463122, -0.00019076676, 0.498945, -0.49893638, -0.002932032, -0.032463685, -3.376577, 0.60273993, 10.856213)
+
+[node name="BossHint_1" parent="." unique_id=710001001 instance=ExtResource("19_hintpickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 35.716927, 0.9, -26.367903)
+hint_title = "CLUE #1 — THE CAMPFIRE WARNING"
+hint_body = "\"So you finally woke up, Roy? Too late.
+Your precious Jessica screamed your name as my puppets dragged her deep into the mist.
+If you think that little pistol can save her, follow the dirt trail past the wooden crates toward the river... if you dare.\""
+
+[node name="BossHint_2" parent="." unique_id=710001002 instance=ExtResource("19_hintpickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.951233, 2.8564253, -40.555313)
+hint_index = 2
+hint_title = "CLUE #2 — THE PUPPET MASTER'S TRAIL"
+hint_body = "\"Still breathing? My wooden mannequins were only a warm-up.
+I have locked Jessica inside an iron cage beyond the river clearing.
+My dark magic shields me as long as my guards stand. Keep walking northwest toward the water... your grave awaits.\""
+
+[node name="BossHint_3" parent="." unique_id=710001003 instance=ExtResource("19_hintpickup")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.570932, -0.9485227, -19.78061)
+hint_index = 3
+hint_title = "CLUE #3 — THE GOLDEN KEY"
+hint_body = "\"You can hear the river now, can't you?
+I hold the Golden Cage Key right here in my hands.
+Step forward into the clearing and face me eye-to-eye, Roy... before I finish her off myself!\""
+
+[node name="waterlayer" parent="." unique_id=257027853 instance=ExtResource("19_1402k")]
+transform = Transform3D(0.51190996, 0, 5.8495007, 0, 2, 0, -2.2423086, 0, 1.3354173, 5.7809954, -3.8624053, -7.2854376)
+
+[node name="AmmoPickup" parent="." unique_id=1780872169 instance=ExtResource("9_ol7uo")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.29656792, -1.2189953, -14.625416)
+
+[node name="Node3D4" type="Node3D" parent="." unique_id=1941818873]
+
+[node name="apple5" parent="Node3D4" unique_id=2039884729 instance=ExtResource("4_m5mgf")]
+transform = Transform3D(0.8, 0, 0, 0, 0.8, 0, 0, 0, 0.8, 1.4016826, 1.3938756, -30.368252)
+mass = 0.2
+linear_damp_mode = 0
+linear_damp = 17.757
+angular_damp_mode = 0
+angular_damp = 0.0
+
+[node name="apple" parent="Node3D4" unique_id=74410156 instance=ExtResource("4_m5mgf")]
+transform = Transform3D(0.8, 0, 0, 0, 0.8, 0, 0, 0, 0.8, 26.340153, 1.0490508, -34.21315)
+mass = 0.2
+linear_damp_mode = 0
+linear_damp = 17.757
+angular_damp_mode = 0
+angular_damp = 0.0
+
+[node name="eme" type="Node3D" parent="." unique_id=1131281604]
+
+[node name="Enemy3_Minion2" parent="eme" unique_id=1073365800 instance=ExtResource("14_enemy3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14.963924, 2.4604697, -40.16143)
+
+[node name="Enemy2_Minion" parent="eme" unique_id=1331438479 instance=ExtResource("13_enemy2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16.657566, 2.5841389, -39.029938)
+
+[node name="Enemy3_Minion" parent="eme" unique_id=1797341584 instance=ExtResource("14_enemy3")]
+transform = Transform3D(-0.99725807, 0, 0.07400218, 0, 1, 0, -0.07400218, 0, -0.99725807, 0.5553576, -1.5321255, -16.151608)
+
+[node name="Enemy3_Minion3" parent="eme" unique_id=1385379141 instance=ExtResource("14_enemy3")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.930235, -1.0538535, -10.562096)
+
+[node name="AmmoPickup" parent="eme" unique_id=873145319 instance=ExtResource("9_ol7uo")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11.80572, 0.1689753, -45.767025)
 
 [editable path="fence_planks2"]

@@ -85,11 +85,11 @@ walk_anim = "orc-walk"
 run_anim = "enemy-2-run"
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=777825713]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0.4, 0)
+transform = Transform3D(0.8, 0, 0, 0, 0.8, 0, 0, 0, 0.8, 0, 0.6, 0)
 shape = SubResource("CapsuleShape3D_e2")
 
 [node name="Ch45_nonPBR" parent="." unique_id=117689220 instance=ExtResource("1_dj6oh")]
-transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
+transform = Transform3D(0.7, 0, 0, 0, 0.7, 0, 0, 0, 0.7, 0, 0, 0)
 
 [node name="Skeleton3D" parent="Ch45_nonPBR" index="0" unique_id=2049966276]
 bones/0/position = Vector3(0.000438807, 0.85250586, 0.00028900942)
