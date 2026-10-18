@@ -22,7 +22,7 @@ const VOICE_P2_ROY: String = "res://import/sound/comic_sfx/comic_voice_p2_roy.wa
 const VOICE_P2_JESSICA: String = "res://import/sound/comic_sfx/comic_voice_p2_jessica.wav"
 const VOICE_P5_WHISPER: String = "res://import/sound/comic_sfx/comic_voice_p5_jessica_whisper.wav"
 
-const PAGE_DURATIONS: Array[float] = [3.0, 3.0, 4.0, 4.0, 3.0, 5.0]
+const PAGE_DURATIONS: Array[float] = [3.5, 3.5, 4.0, 4.0, 3.5, 5.0]
 
 # Node references
 @onready var comic_container: Control = $ComicContainer
@@ -97,16 +97,20 @@ func _load_resources() -> void:
 	if ResourceLoader.exists(SFX_PAGE_6):
 		title_sound = load(SFX_PAGE_6)
 
-	if ResourceLoader.exists(VOICE_P1_ROY):
-		voice_p1_roy = load(VOICE_P1_ROY)
-	if ResourceLoader.exists(VOICE_P1_JESSICA):
-		voice_p1_jessica = load(VOICE_P1_JESSICA)
-	if ResourceLoader.exists(VOICE_P2_ROY):
-		voice_p2_roy = load(VOICE_P2_ROY)
-	if ResourceLoader.exists(VOICE_P2_JESSICA):
-		voice_p2_jessica = load(VOICE_P2_JESSICA)
-	if ResourceLoader.exists(VOICE_P5_WHISPER):
-		voice_p5_whisper = load(VOICE_P5_WHISPER)
+	voice_p1_roy = _load_audio_res("res://import/sound/comic_sfx/comic_voice_p1_roy")
+	voice_p1_jessica = _load_audio_res("res://import/sound/comic_sfx/comic_voice_p1_jessica")
+	voice_p2_roy = _load_audio_res("res://import/sound/comic_sfx/comic_voice_p2_roy")
+	voice_p2_jessica = _load_audio_res("res://import/sound/comic_sfx/comic_voice_p2_jessica")
+	voice_p5_whisper = _load_audio_res("res://import/sound/comic_sfx/comic_voice_p5_jessica_whisper")
+
+func _load_audio_res(base_path: String) -> AudioStream:
+	var mp3_path := base_path + ".mp3"
+	if ResourceLoader.exists(mp3_path):
+		return load(mp3_path)
+	var wav_path := base_path + ".wav"
+	if ResourceLoader.exists(wav_path):
+		return load(wav_path)
+	return null
 
 func _load_panel_texture(path: String) -> Texture2D:
 	var gp := ProjectSettings.globalize_path(path)

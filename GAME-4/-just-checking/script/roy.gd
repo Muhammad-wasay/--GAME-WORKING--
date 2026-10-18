@@ -1070,7 +1070,9 @@ func _show_death_screen(custom_title: String = "") -> void:
 	# Stop world background music / siren so Try Again sound plays clearly
 	var scene_root := get_tree().current_scene
 	if scene_root:
-		var bg_music := scene_root.find_child("AudioStreamPlayer2D", true, false)
+		var bg_music := scene_root.find_child("AudioStreamPlayer", true, false)
+		if not bg_music:
+			bg_music = scene_root.find_child("AudioStreamPlayer2D", true, false)
 		if bg_music and bg_music.has_method("stop"):
 			bg_music.stop()
 		var siren := scene_root.find_child("EscapeSirenAudio", true, false)

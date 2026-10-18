@@ -336,6 +336,18 @@ func _physics_process(delta: float) -> void:
 	if is_emerging:
 		return
 	
+	# Cutscene/Dialogue protection: Roy dialogue me ho toh koi bhi enemy attack ya chase na kare
+	if not is_instance_valid(player):
+		_find_player()
+	if is_instance_valid(player) and ("dialogue_locked" in player and player.dialogue_locked):
+		velocity.x = move_toward(velocity.x, 0.0, delta * 8.0)
+		velocity.z = move_toward(velocity.z, 0.0, delta * 8.0)
+		if not is_on_floor():
+			velocity += get_gravity() * delta
+		_play_anim(idle_anim, false)
+		move_and_slide()
+		return
+	
 	if is_retreating:
 		if not is_on_floor():
 			velocity += get_gravity() * delta

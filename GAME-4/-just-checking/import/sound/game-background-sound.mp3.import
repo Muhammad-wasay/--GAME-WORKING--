@@ -12,7 +12,7 @@ dest_files=["res://.godot/imported/game-background-sound.mp3-0b73c8dd3bc0c13df6e
 
 [params]
 
-loop=false
+loop=true
 loop_offset=0
 bpm=0
 beat_count=0

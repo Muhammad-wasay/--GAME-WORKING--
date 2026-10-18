@@ -100,7 +100,7 @@ use_collision = true
 size = Vector3(1.2224121, 0.08605957, 0.2794587)
 
 [node name="apple2" parent="." unique_id=1925936510 instance=ExtResource("4_m5mgf")]
-transform = Transform3D(0.05, 0, 0, 0, 0.05, 0, 0, 0, 0.05, 16.24584, 0.6524029, -23.183205)
+transform = Transform3D(0.8, 0, 0, 0, 0.8, 0, 0, 0, 0.8, 16.24584, 0.6524029, -23.183205)
 mass = 0.2
 physics_material_override = SubResource("PhysicsMaterial_6jrnk")
 linear_damp_mode = 0
@@ -109,7 +109,7 @@ angular_damp_mode = 0
 angular_damp = 0.0
 
 [node name="apple" parent="." unique_id=309267002 instance=ExtResource("4_m5mgf")]
-transform = Transform3D(0.05, 0, 0, 0, 0.042759538, 0.025915667, 0, -0.025915667, 0.042759538, 15.092141, 0.570454, -22.944736)
+transform = Transform3D(0.8, 0, 0, 0, 0.6841526, 0.41465068, 0, -0.41465068, 0.6841526, 15.092141, 0.570454, -22.944736)
 mass = 0.2
 physics_material_override = SubResource("PhysicsMaterial_6jrnk")
 linear_damp_mode = 0
@@ -118,7 +118,7 @@ angular_damp_mode = 0
 angular_damp = 0.0
 
 [node name="apple3" parent="." unique_id=651493764 instance=ExtResource("4_m5mgf")]
-transform = Transform3D(0.051, 0, 0, 0, 0.051, 0, 0, 0, 0.051, 15.576934, 0.63986707, -23.313826)
+transform = Transform3D(0.8, 0, 0, 0, 0.8, 0, 0, 0, 0.8, 15.576934, 0.63986707, -23.313826)
 mass = 0.2
 physics_material_override = SubResource("PhysicsMaterial_6jrnk")
 linear_damp_mode = 0
@@ -159,8 +159,10 @@ walk_speed = 0.65
 transform = Transform3D(-0.32, 0, 0, 0, 0.32, 0, 0, 0, -0.32, 33.875114, 0.9272516, -25.111797)
 detection_range = 9.0
 
-[node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="." unique_id=1564305045]
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="." unique_id=1564305045]
 stream = ExtResource("13_f345f")
+volume_db = -6.0
+autoplay = true
 
 [node name="Node3D2" parent="." unique_id=270298504 instance=ExtResource("14_bqa5m")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -77.190155, -2.642686, -6.212082)

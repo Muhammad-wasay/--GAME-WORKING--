@@ -10,7 +10,11 @@ var is_destroyed := false
 const WOOD_DEBRIS_COUNT = 6
 
 func _ready() -> void:
-	$"../AudioStreamPlayer2D".play()
+	var bg = get_node_or_null("../AudioStreamPlayer")
+	if not bg:
+		bg = get_node_or_null("../AudioStreamPlayer2D")
+	if bg and bg.has_method("play") and not bg.playing:
+		bg.play()
 	current_health = max_health
 
 func take_damage(amount: float, hit_position: Vector3 = Vector3.ZERO, hit_normal: Vector3 = Vector3.UP) -> void:

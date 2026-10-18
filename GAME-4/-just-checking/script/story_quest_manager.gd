@@ -834,36 +834,23 @@ func _on_dialogue_line_started(speaker: String, entry: Dictionary) -> void:
 			cam_tween = create_tween()
 			cam_tween.tween_property(cinematic_camera, "global_transform", target_transform, 0.48).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 			
-	elif speaker == "..." or is_mannequins_rising:
+	elif speaker == "..." or speaker == "":
+		if is_instance_valid(boss) and stage == QuestStage.BOSS_ENCOUNTER_DIALOGUE:
+			# Dramatic tense close-up on Villain Boss during the silence before "I have killed her"
+			var boss_face := boss.global_position + Vector3(0.0, 0.78, 0.0)
+			var to_roy := (roy.global_position - boss.global_position)
+			to_roy.y = 0.0
+			var to_roy_dir := to_roy.normalized() if to_roy.length_squared() > 0.001 else -boss.global_transform.basis.z
+			var desired_cam := boss_face + (to_roy_dir * 1.25) + Vector3(0.0, 0.05, 0.0)
+			var target_transform := _safe_dialogue_camera_transform(boss_face, desired_cam, 0.45)
+			cinematic_camera.fov = 44.0
+			cam_tween = create_tween()
+			cam_tween.tween_property(cinematic_camera, "global_transform", target_transform, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			
+	elif is_mannequins_rising and stage != QuestStage.BOSS_ENCOUNTER_DIALOGUE:
 		var focus_p := roy.global_position
 		if is_instance_valid(jessica):
 			focus_p = (roy.global_position + jessica.global_position) * 0.5
-		
-		# Spawn minions further away towards the forest edge (~7.5m - 9m away)
-		var spawn_offsets: Array[Vector3] = [
-			Vector3(-6.8, 0.0, -6.5),
-			Vector3(6.8, 0.0, -6.5)
-		]
-		for i in range(spawn_offsets.size()):
-			var minion_scene: PackedScene = ENEMY_3_SCENE if (i % 2 == 1) else ENEMY_2_SCENE
-			var minion := minion_scene.instantiate() as ForestEnemy
-			minion.is_emerging = true
-			get_tree().current_scene.add_child(minion)
-			minion.scale = Vector3(0.32, 0.32, 0.32)
-			
-			var spawn_pos := focus_p + spawn_offsets[i]
-			var space_state := minion.get_world_3d().direct_space_state
-			var ray_q := PhysicsRayQueryParameters3D.create(spawn_pos + Vector3(0, 4.0, 0), spawn_pos + Vector3(0, -6.0, 0))
-			var ray_res := space_state.intersect_ray(ray_q)
-			if ray_res and ray_res.has("position"):
-				spawn_pos = ray_res.position + Vector3(0, 0.02, 0)
-			
-			minion.global_position = spawn_pos
-			minion.run_speed = 1.30
-			minion.detection_range = 999.0
-			minion.lose_interest_range = 999.0
-			minion.persistent_chase = true
-			minion.emerge_from_ground(1.6)
 		
 		# Dramatic wide camera looking out into the distant woods towards the emerging horde
 		var target_look := focus_p + Vector3(0.0, 0.5, -6.5)
